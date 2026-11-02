@@ -13,6 +13,7 @@ export class Sala extends Scene {
 
     // Bordas da sala (as portas entram na issue #12)
     this.add(new Parede(0, 0, L, e)); // cima
+    this.add(new Parede(0, 0, L, e)); // cima
     this.add(new Parede(0, A - e, L, e)); // baixo
     this.add(new Parede(0, 0, e, A)); // esquerda
     this.add(new Parede(L - e, 0, e, A)); // direita
@@ -21,6 +22,6 @@ export class Sala extends Scene {
 
     // Robôs inimigos
     this.add(new Robo(vec(220, 50)));
-    this.add(new Robo(vec(260, 130)));
+    
   }
 }
