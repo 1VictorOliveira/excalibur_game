@@ -1,6 +1,7 @@
 // src/actors/robos.ts
 import { Actor, Collider, CollisionType, Color, Engine, Vector, vec } from "excalibur";
 import { Bala } from "./bala";
+import { Jogador } from "./jogador";
 import { Parede } from "./parede";
 import { Danificavel } from "../dano";
 import { Grupos } from "../grupos";
@@ -59,6 +60,11 @@ export class Robo extends Actor implements Danificavel {
     }
     // Se colidir com parede, se autodestrói
     if (outro.owner instanceof Parede) {
+      this.kill();
+    }
+    // Se colidir com jogador, se autodestrói e tira uma vida do jogador
+    if (outro.owner instanceof Jogador) {
+      outro.owner.levarDano(1);
       this.kill();
     }
   }
