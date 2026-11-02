@@ -11,6 +11,7 @@ export class Robo extends Actor implements Danificavel {
   recargaTiro = 1000; // ms entre tiros
   hp = 2; // aguenta 2 tiros antes de morrer
   private tempoRecarga = 0;
+  private destruido = false;
 
   constructor(pos: Vector) {
     super({
@@ -55,18 +56,24 @@ export class Robo extends Actor implements Danificavel {
   override onCollisionStart(_self: Collider, outro: Collider): void {
     // Se colidir com outro robô, ambos se autodestroem
     if (outro.owner instanceof Robo) {
-      this.kill();
-      outro.owner.kill();
+      outro.owner.destruir();
+      this.destruir();
     }
     // Se colidir com parede, se autodestrói
     if (outro.owner instanceof Parede) {
-      this.kill();
+      this.destruir();
     }
     // Se colidir com jogador, se autodestrói e tira uma vida do jogador
     if (outro.owner instanceof Jogador) {
       outro.owner.levarDano(1);
-      this.kill();
+      this.destruir();
     }
+  }
+
+  destruir(): void {
+    if (this.destruido) return;
+    this.destruido = true;
+    this.kill();
   }
 
   atirar(direcao: Vector): void {
@@ -78,7 +85,7 @@ export class Robo extends Actor implements Danificavel {
   levarDano(quantidade: number): void {
     this.hp -= quantidade;
     if (this.hp <= 0) {
-      this.kill();
+      this.destruir();
     } else {
       // Pisca quando leva dano mas não morre
       this.actions.blink(80, 80, 3);
