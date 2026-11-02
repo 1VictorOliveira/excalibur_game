@@ -1,8 +1,10 @@
 // src/actors/jogador.ts
 import { Actor, CollisionType, Color, Engine, Keys, Vector, vec } from "excalibur";
 import { Bala } from "./bala";
+import { Danificavel } from "../dano";
+import { Grupos } from "../grupos";
 
-export class Jogador extends Actor {
+export class Jogador extends Actor implements Danificavel {
   velocidade = 90; // pixels por segundo
   direcao = vec(1, 0); // última direção andada
   recargaTiro = 250; // ms entre um tiro e outro
@@ -16,6 +18,7 @@ export class Jogador extends Actor {
       height: 14,
       color: Color.fromHex("#5ad45a"),
       collisionType: CollisionType.Active,
+      collisionGroup: Grupos.jogador,
     });
   }
 
@@ -56,6 +59,11 @@ export class Jogador extends Actor {
   atirar(direcao: Vector): void {
     // A bala nasce um pouco à frente do jogador, não dentro dele
     const saida = this.pos.add(direcao.normalize().scale(10));
-    this.scene?.add(new Bala(saida, direcao));
+    this.scene?.add(new Bala(saida, direcao, Grupos.tiroJogador));
+  }
+
+  levarDano(_quantidade: number): void {
+    // Por enquanto só pisca. A perda de vida entra na issue #13 (Sistema de Vidas).
+    this.actions.blink(80, 80, 5);
   }
 }
