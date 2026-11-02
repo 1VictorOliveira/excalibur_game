@@ -1,6 +1,7 @@
 import { Color, Engine, Scene, vec } from "excalibur";
 import { Jogador } from "../actors/jogador";
 import { Parede } from "../actors/parede";
+import { Robo } from "../actors/robos";
 
 export class Sala extends Scene {
   override onInitialize(engine: Engine): void {
@@ -17,5 +18,9 @@ export class Sala extends Scene {
     this.add(new Parede(L - e, 0, e, A)); // direita
 
     this.add(new Jogador(vec(40, A / 2)));
+
+    // Robôs inimigos
+    this.add(new Robo(vec(220, 50)));
+    this.add(new Robo(vec(260, 130)));
   }
 }

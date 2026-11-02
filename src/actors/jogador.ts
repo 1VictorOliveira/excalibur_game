@@ -8,7 +8,11 @@ export class Jogador extends Actor implements Danificavel {
   velocidade = 90; // pixels por segundo
   direcao = vec(1, 0); // última direção andada
   recargaTiro = 250; // ms entre um tiro e outro
+  hpMax = 3;
+  hp = this.hpMax;
   private tempoRecarga = 0;
+  private tempoInvencibilidade = 0;
+  private invencivel = false;
 
   constructor(pos: Vector) {
     super({
@@ -23,6 +27,14 @@ export class Jogador extends Actor implements Danificavel {
   }
 
   override onPreUpdate(engine: Engine, elapsed: number): void {
+    // Atualiza invencibilidade
+    if (this.invencivel) {
+      this.tempoInvencibilidade -= elapsed;
+      if (this.tempoInvencibilidade <= 0) {
+        this.invencivel = false;
+      }
+    }
+
     const k = engine.input.keyboard;
 
     // --- Movimento: WASD (as setas agora são do tiro) ---
@@ -62,8 +74,18 @@ export class Jogador extends Actor implements Danificavel {
     this.scene?.add(new Bala(saida, direcao, Grupos.tiroJogador));
   }
 
-  levarDano(_quantidade: number): void {
-    // Por enquanto só pisca. A perda de vida entra na issue #13 (Sistema de Vidas).
-    this.actions.blink(80, 80, 5);
+  levarDano(quantidade: number): void {
+    if (this.invencivel) return;
+    
+    this.hp -= quantidade;
+    
+    if (this.hp <= 0) {
+      this.kill();
+    } else {
+      // Blink e invencibilidade temporária (1 segundo)
+      this.actions.blink(80, 80, 5);
+      this.invencivel = true;
+      this.tempoInvencibilidade = 1000;
+    }
   }
 }
