@@ -22,6 +22,7 @@ export class Sala extends Scene {
 
     // Robôs inimigos
     this.add(new Robo(vec(220, 50)));
+    this.add(new Robo(vec(300, 50)))
     
   }
 }

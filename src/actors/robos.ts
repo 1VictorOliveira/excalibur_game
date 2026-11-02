@@ -8,7 +8,7 @@ import { Grupos } from "../grupos";
 
 export class Robo extends Actor implements Danificavel {
   velocidade = 25; // mais lento que o jogador (90)
-  recargaTiro = 1000000; // ms entre tiros
+  recargaTiro = 1000; // ms entre tiros
   hp = 2; // aguenta 2 tiros antes de morrer
   private tempoRecarga = 0;
 
