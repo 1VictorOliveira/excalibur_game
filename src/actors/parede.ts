@@ -1,4 +1,6 @@
+// src/actors/parede.ts
 import { Actor, CollisionType, Color, vec } from "excalibur";
+import { Grupos } from "../grupos";
 
 export class Parede extends Actor {
   constructor(x: number, y: number, largura: number, altura: number) {
@@ -10,6 +12,7 @@ export class Parede extends Actor {
       height: altura,
       color: Color.fromHex("#2b4ad8"),
       collisionType: CollisionType.Fixed, // nunca se move e bloqueia quem é Active
+      collisionGroup: Grupos.parede,
     });
   }
 }

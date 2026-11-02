@@ -1,28 +1,30 @@
 // src/actors/bala.ts
-import { Actor, Collider, CollisionType, Color, Vector } from "excalibur";
+import { Actor, Collider, CollisionGroup, CollisionType, Color, Vector } from "excalibur";
+import { podeLevarDano } from "../dano";
 
 export class Bala extends Actor {
-  constructor(pos: Vector, direcao: Vector) {
+  dano = 1;
+
+  constructor(pos: Vector, direcao: Vector, grupo: CollisionGroup, cor = Color.Yellow) {
     super({
       name: "bala",
       pos,
       radius: 2,
-      color: Color.Yellow,
-      vel: direcao.normalize().scale(220), // 220 px/s na direção do tiro
-      collisionType: CollisionType.Passive, // detecta colisão, mas não empurra ninguém
+      color: cor,
+      vel: direcao.normalize().scale(220),
+      collisionType: CollisionType.Passive,
+      collisionGroup: grupo, // quem ela pode acertar é decidido pelo grupo
     });
   }
 
   override onInitialize(): void {
-    // Se não bater em nada, some depois de 1,5 s (evita bala infinita na memória)
     this.actions.delay(1500).die();
   }
 
   override onCollisionStart(_self: Collider, outro: Collider): void {
+    // O grupo já filtrou: se chegou aqui, é um alvo válido ou uma parede.
     const alvo = outro.owner;
-    // Gambiarra temporária: ignora o jogador e outras balas.
-    // Na issue #10 isso vira grupos de colisão.
-    if (alvo.name === "jogador" || alvo.name === "bala") return;
+    if (podeLevarDano(alvo)) alvo.levarDano(this.dano);
     this.kill();
   }
 }
