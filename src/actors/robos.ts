@@ -1,5 +1,5 @@
 // src/actors/robos.ts
-import { Actor, CollisionType, Color, Engine, Vector, vec } from "excalibur";
+import { Actor, Collider, CollisionType, Color, Engine, Vector, vec } from "excalibur";
 import { Bala } from "./bala";
 import { Danificavel } from "../dano";
 import { Grupos } from "../grupos";
@@ -18,7 +18,7 @@ export class Robo extends Actor implements Danificavel {
       height: 14,
       color: Color.fromHex("#d84a4a"),
       collisionType: CollisionType.Active,
-      collisionGroup: Grupos.inimigo,
+      collisionGroup: Grupos.robo,
     });
   }
 
@@ -28,22 +28,6 @@ export class Robo extends Actor implements Danificavel {
     if (!jogador) {
       this.vel = vec(0, 0); // Para o robô quando o jogador morre
       return;
-    }
-
-    // Separação: evita sobreposição com outros robôs
-    const outrosRobos = this.scene?.actors.filter(
-      a => a.name === "robo" && a !== this
-    ) || [];
-    
-    for (const outro of outrosRobos) {
-      const dist = this.pos.distance(outro.pos);
-      const distMinima = 15; // distância mínima entre robôs
-      
-      if (dist < distMinima && dist > 0) {
-        // Empurra para longe do outro robô
-        const direcaoSeparação = this.pos.sub(outro.pos).normalize();
-        this.pos = this.pos.add(direcaoSeparação.scale(2));
-      }
     }
 
     // Calcula direção até o jogador
@@ -63,6 +47,14 @@ export class Robo extends Actor implements Danificavel {
     if (this.tempoRecarga <= 0 && distancia > 0) {
       this.atirar(direcao);
       this.tempoRecarga = this.recargaTiro;
+    }
+  }
+
+  override onCollisionStart(_self: Collider, outro: Collider): void {
+    // Se colidir com outro robô, ambos se autodestroem
+    if (outro.owner instanceof Robo) {
+      this.kill();
+      outro.owner.kill();
     }
   }
 
