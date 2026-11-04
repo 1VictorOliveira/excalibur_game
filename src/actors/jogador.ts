@@ -1,5 +1,18 @@
 // src/actors/jogador.ts
-import { Actor, CollisionType, Color, Engine, Keys, Vector, vec } from "excalibur";
+import {
+  Actor,
+  Animation,
+  CollisionType,
+  Color,
+  EmitterType,
+  Engine,
+  Keys,
+  ParticleEmitter,
+  SpriteSheet,
+  Vector,
+  vec,
+} from "excalibur";
+import { Recursos } from "../recursos";
 import { Bala } from "./bala";
 import { Danificavel } from "../dano";
 import { Grupos } from "../grupos";
@@ -13,17 +26,48 @@ export class Jogador extends Actor implements Danificavel {
   private tempoRecarga = 0;
   private tempoInvencibilidade = 0;
   private invencivel = false;
+  private rastro!: ParticleEmitter;
 
   constructor(pos: Vector) {
     super({
       name: "jogador",
       pos,
-      width: 10,
-      height: 14,
-      color: Color.fromHex("#5ad45a"),
+      width: 10, // caixa de colisão menor que o desenho (24x24): só o núcleo da luz encosta
+      height: 10,
       collisionType: CollisionType.Active,
       collisionGroup: Grupos.jogador,
     });
+  }
+
+  override onInitialize(): void {
+    // ---------- Sprite: spritesheet 96x48 = 4 colunas x 2 linhas de 24x24 ----------
+    const folha = SpriteSheet.fromImageSource({
+      image: Recursos.Luz,
+      grid: { rows: 2, columns: 4, spriteWidth: 24, spriteHeight: 24 },
+    });
+    // Linha 1 (quadros 0 a 3): brilho parado. A linha 2 (4 a 7) é a carga do tiro, para depois.
+    const brilho = Animation.fromSpriteSheet(folha, [0, 1, 2, 3], 150);
+    this.graphics.use(brilho);
+
+    // ---------- Rastro de partículas: mostra para onde a luz está indo ----------
+    this.rastro = new ParticleEmitter({
+      emitterType: EmitterType.Circle,
+      radius: 3,
+      emitRate: 45, // partículas por segundo
+      isEmitting: false, // só liga quando estiver se movendo
+      particle: {
+        life: 450, // ms até sumir
+        minSpeed: 2,
+        maxSpeed: 10,
+        minSize: 1,
+        maxSize: 2,
+        beginColor: Color.fromHex("#fff4b0"), // amarelo claro, igual ao núcleo
+        endColor: Color.fromHex("#8c61d4"), // termina violeta, igual às pontas
+        fade: true,
+      },
+    });
+    this.rastro.z = -1; // partículas ficam atrás da luz
+    this.addChild(this.rastro);
   }
 
   override onPreUpdate(engine: Engine, elapsed: number): void {
@@ -50,6 +94,9 @@ export class Jogador extends Actor implements Danificavel {
     } else {
       this.vel = vec(0, 0);
     }
+
+    // Parada: só brilha. Andando: solta o rastro.
+    this.rastro.isEmitting = mov.size > 0;
 
     // --- Tiro: setas em 8 direções (duas setas juntas = diagonal) ---
     const mira = vec(0, 0);

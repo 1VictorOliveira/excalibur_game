@@ -1,5 +1,6 @@
 import { Color, DisplayMode, Engine } from "excalibur";
 import { Sala } from "./scenes/sala";
+import { loader } from "./recursos";
 
 const game = new Engine({
   width: 320, // resolução interna baixa = visual pixel art
@@ -12,7 +13,7 @@ const game = new Engine({
   },
 });
 
-game.start("sala");
+game.start("sala", { loader }); // carrega as imagens antes de abrir a sala
 
 // F1 liga/desliga a visualização das caixas de colisão
 window.addEventListener("keydown", (e) => {
