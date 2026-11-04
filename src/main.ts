@@ -1,5 +1,7 @@
 import { Color, DisplayMode, Engine } from "excalibur";
 import { Sala } from "./scenes/sala";
+import { Inicio } from "./scenes/inicio";
+import { Fim } from "./scenes/fim";
 import { loader } from "./recursos";
 
 const game = new Engine({
@@ -9,11 +11,13 @@ const game = new Engine({
   pixelArt: true, // sprites sem borrão ao escalar
   backgroundColor: Color.Black,
   scenes: {
-    sala: Sala,
+    inicio: Inicio, // tela inicial (home)
+    sala: Sala, // o jogo em si
+    fim: Fim, // fim de jogo, com reinício
   },
 });
 
-game.start("sala", { loader }); // carrega as imagens antes de abrir a sala
+game.start("inicio", { loader }); // carrega imagens e fonte, depois abre a home
 
 // F1 liga/desliga a visualização das caixas de colisão
 window.addEventListener("keydown", (e) => {

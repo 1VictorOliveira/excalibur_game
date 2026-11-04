@@ -122,17 +122,47 @@ export class Jogador extends Actor implements Danificavel {
   }
 
   levarDano(quantidade: number): void {
-    if (this.invencivel) return;
-    
+    if (this.invencivel || this.hp <= 0) return;
+
     this.hp -= quantidade;
-    
+    this.scene?.camera.shake(2, 2, 200); // tranco na tela: o jogador SENTE que levou dano
+
     if (this.hp <= 0) {
-      this.kill();
+      this.morrer();
     } else {
       // Blink e invencibilidade temporária (1 segundo)
       this.actions.blink(80, 80, 5);
       this.invencivel = true;
       this.tempoInvencibilidade = 1000;
     }
+  }
+
+  // Antes o jogador só sumia (kill). Agora explode em luz e o jogo vai para a tela de fim.
+  private morrer(): void {
+    const cena = this.scene;
+    if (!cena) return;
+
+    const explosao = new ParticleEmitter({
+      pos: this.pos.clone(),
+      emitterType: EmitterType.Circle,
+      radius: 2,
+      isEmitting: false,
+      particle: {
+        life: 900,
+        minSpeed: 30,
+        maxSpeed: 90,
+        minSize: 1,
+        maxSize: 3,
+        beginColor: Color.fromHex("#ffffff"),
+        endColor: Color.fromHex("#8c61d4"),
+        fade: true,
+      },
+    });
+    cena.add(explosao);
+    explosao.emitParticles(60);
+    cena.camera.shake(4, 4, 400);
+
+    this.kill();
+    cena.engine.clock.schedule(() => cena.engine.goToScene("fim"), 1300);
   }
 }
