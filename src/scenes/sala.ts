@@ -1,28 +1,28 @@
-import { Color, Engine, Scene, vec } from "excalibur";
+// src/scenes/sala.ts
+import { Color, Engine, Scene } from "excalibur";
 import { Jogador } from "../actors/jogador";
-import { Parede } from "../actors/parede";
 import { Robo } from "../actors/robos";
+import { COLUNAS, LINHAS, montarLabirinto } from "../salas/labirinto";
 
 export class Sala extends Scene {
   override onInitialize(engine: Engine): void {
     this.backgroundColor = Color.fromHex("#0d0d14");
 
-    const L = engine.drawWidth; // 320
-    const A = engine.drawHeight; // 180
-    const e = 6; // espessura da parede
+    // Bordas + labirinto sorteado (issue #11)
+    const labirinto = montarLabirinto(this, engine);
 
-    // Bordas da sala (as portas entram na issue #12)
-    this.add(new Parede(0, 0, L, e)); // cima
-    this.add(new Parede(0, 0, L, e)); // cima
-    this.add(new Parede(0, A - e, L, e)); // baixo
-    this.add(new Parede(0, 0, e, A)); // esquerda
-    this.add(new Parede(L - e, 0, e, A)); // direita
+    // Jogador começa na célula do meio da coluna da esquerda, ao lado da porta
+    this.add(new Jogador(labirinto.centroDaCelula(0, 1)));
 
-    this.add(new Jogador(vec(40, A / 2)));
+    // Robôs nascem no centro de células sorteadas, longe do jogador
+    // (nunca dentro de parede, senão se autodestroem na hora)
+    const livres: [number, number][] = [];
+    for (let c = 2; c < COLUNAS; c++) for (let l = 0; l < LINHAS; l++) livres.push([c, l]);
+    livres.sort(() => Math.random() - 0.5);
 
-    // Robôs inimigos
-    this.add(new Robo(vec(220, 50)));
-    this.add(new Robo(vec(300, 50)))
-    
+    const quantidadeRobos = 3;
+    for (const [c, l] of livres.slice(0, quantidadeRobos)) {
+      this.add(new Robo(labirinto.centroDaCelula(c, l)));
+    }
   }
 }
