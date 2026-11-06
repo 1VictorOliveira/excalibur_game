@@ -1,6 +1,7 @@
 import { Color, DisplayMode, Engine, Loader } from "excalibur";
 import { Sala } from "./scenes/sala";
 import { Menu } from "./scenes/menu";
+import { GameOver } from "./scenes/game-over";
 import { loadables } from "./resources";
 
 const game = new Engine({
@@ -12,6 +13,7 @@ const game = new Engine({
   scenes: {
     menu: Menu,
     sala: Sala,
+    gameover: GameOver,
   },
 });
 

@@ -85,6 +85,8 @@ export class Jogador extends Actor implements Danificavel {
     
     if (this.hp <= 0) {
       this.kill();
+      // Transiciona para tela de game over
+      this.scene?.engine.goToScene("gameover");
     } else {
       // Blink e invencibilidade temporária (1 segundo)
       this.actions.blink(80, 80, 5);

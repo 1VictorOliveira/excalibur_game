@@ -47,6 +47,18 @@ export class Sala extends Scene {
     this.montar(engine);
   }
 
+  override onActivate(): void {
+    // Reconstrói a sala ao voltar (ex: após game over)
+    const engine = this.engine;
+    if (engine) {
+      // Remove todos os atores existentes antes de reconstruir
+      for (const ator of [...this.actors]) {
+        ator.kill();
+      }
+      this.montar(engine);
+    }
+  }
+
   override onPreUpdate(engine: Engine, _elapsed: number): void {
     // Processa transição pendente no início do frame
     if (this.transicaoPendente) {
