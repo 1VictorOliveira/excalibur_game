@@ -30,6 +30,12 @@ export class Jogador extends Actor implements Danificavel {
   }
 
   override onPreUpdate(engine: Engine, elapsed: number): void {
+    // Não executa lógica quando pausado
+    if (Estado.pausado) {
+      this.vel = vec(0, 0);
+      return;
+    }
+
     // Atualiza invencibilidade
     if (this.invencivel) {
       this.tempoInvencibilidade -= elapsed;
@@ -85,6 +91,8 @@ export class Jogador extends Actor implements Danificavel {
     
     if (this.hp <= 0) {
       this.kill();
+      // Transiciona para tela de game over
+      this.scene?.engine.goToScene("gameover");
     } else {
       // Blink e invencibilidade temporária (1 segundo)
       this.actions.blink(80, 80, 5);

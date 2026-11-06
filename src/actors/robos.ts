@@ -5,6 +5,7 @@ import { Jogador } from "./jogador";
 import { Parede } from "./parede";
 import { Danificavel } from "../dano";
 import { Grupos } from "../grupos";
+import { Estado } from "../estado";
 
 export class Robo extends Actor implements Danificavel {
   velocidade = 25; // mais lento que o jogador (90)
@@ -26,6 +27,12 @@ export class Robo extends Actor implements Danificavel {
   }
 
   override onPreUpdate(engine: Engine, elapsed: number): void {
+    // Não executa lógica quando pausado
+    if (Estado.pausado) {
+      this.vel = vec(0, 0);
+      return;
+    }
+
     // Busca o jogador na cena
     const jogador = this.scene?.actors.find(a => a.name === "jogador");
     if (!jogador) {

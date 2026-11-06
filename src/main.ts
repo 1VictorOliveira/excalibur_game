@@ -1,18 +1,33 @@
-import { Color, DisplayMode, Engine } from "excalibur";
+import { Color, DisplayMode, Engine, Loader } from "excalibur";
 import { Sala } from "./scenes/sala";
+import { Menu } from "./scenes/menu";
+import { GameOver } from "./scenes/game-over";
+import { Configuracoes } from "./scenes/configuracoes";
+import { loadables } from "./resources";
+
+// Resolução fixa ideal para pixel art
+const LARGURA = 320;
+const ALTURA = 180;
 
 const game = new Engine({
-  width: 320, // resolução interna baixa = visual pixel art
-  height: 180,
+  width: LARGURA,
+  height: ALTURA,
   displayMode: DisplayMode.FitScreen,
-  pixelArt: true, // sprites sem borrão ao escalar
+  pixelArt: false,
   backgroundColor: Color.Black,
   scenes: {
+    menu: Menu,
     sala: Sala,
+    gameover: GameOver,
+    configuracoes: Configuracoes,
   },
 });
 
-game.start("sala");
+// Pré-carrega recursos e inicia no menu
+const loader = new Loader(loadables);
+game.start(loader).then(() => {
+  game.goToScene("menu");
+});
 
 // F1 liga/desliga a visualização das caixas de colisão
 window.addEventListener("keydown", (e) => {

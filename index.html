@@ -5,10 +5,76 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Berzerk Excalibur</title>
     <style>
-      html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
+      html, body { 
+        margin: 0; 
+        height: 100%; 
+        background: #000; 
+        overflow: hidden; 
+      }
+
+      /* Efeito CRT: scanlines + vinheta + cintilação */
+      .crt-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+        z-index: 9999;
+      }
+
+      /* Scanlines - desativado */
+      /* .crt-overlay::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: repeating-linear-gradient(
+          0deg,
+          rgba(0, 0, 0, 0.15),
+          rgba(0, 0, 0, 0.15) 1px,
+          transparent 1px,
+          transparent 2px
+        );
+        animation: scanline-flicker 8s linear infinite;
+      } */
+
+      /* Vinheta */
+      .crt-overlay::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: radial-gradient(
+          ellipse at center,
+          transparent 0%,
+          transparent 60%,
+          rgba(0, 0, 0, 0.4) 100%
+        );
+      }
+
+      /* Animação de cintilação sutil */
+      @keyframes scanline-flicker {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.95; }
+        75% { opacity: 1; }
+        87% { opacity: 0.97; }
+      }
+
+      /* Respeita prefers-reduced-motion */
+      @media (prefers-reduced-motion: reduce) {
+        .crt-overlay::before {
+          animation: none;
+        }
+      }
     </style>
   </head>
   <body>
+    <div class="crt-overlay"></div>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>
