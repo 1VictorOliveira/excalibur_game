@@ -35,8 +35,7 @@ export class Menu extends Scene {
     this.criarTexto("BERZERK", cx, 25, 16, COR_VERMELHO);
 
     this.criarMoldura();
-    this.criarBotao(cx, 100, "JOGAR", () => this.engine.goToScene("sala"));
-    this.criarBotao(cx, 125, "CONFIG", () => this.engine.goToScene("configuracoes"));
+    this.criarBotao(cx, 110, "JOGAR", () => this.engine.goToScene("sala"));
     this.criarInsertCoin(cx);
 
     // Rodapé (sem glifos especiais, que a fonte pode não ter)
