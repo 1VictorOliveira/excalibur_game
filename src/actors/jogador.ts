@@ -3,6 +3,7 @@ import { Actor, CollisionType, Color, Engine, Keys, Vector, vec } from "excalibu
 import { Bala } from "./bala";
 import { Danificavel } from "../dano";
 import { Grupos } from "../grupos";
+import { Estado } from "../estado";
 
 export class Jogador extends Actor implements Danificavel {
   velocidade = 90; // pixels por segundo
@@ -14,7 +15,7 @@ export class Jogador extends Actor implements Danificavel {
   private tempoInvencibilidade = 0;
   private invencivel = false;
 
-  constructor(pos: Vector) {
+  constructor(pos: Vector, hp: number = 3, direcaoInicial: Vector = vec(1, 0)) {
     super({
       name: "jogador",
       pos,
@@ -24,6 +25,8 @@ export class Jogador extends Actor implements Danificavel {
       collisionType: CollisionType.Active,
       collisionGroup: Grupos.jogador,
     });
+    this.hp = hp;
+    this.direcao = direcaoInicial;
   }
 
   override onPreUpdate(engine: Engine, elapsed: number): void {
@@ -78,6 +81,7 @@ export class Jogador extends Actor implements Danificavel {
     if (this.invencivel) return;
     
     this.hp -= quantidade;
+    Estado.hp = this.hp;
     
     if (this.hp <= 0) {
       this.kill();
