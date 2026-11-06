@@ -2,11 +2,16 @@ import { Color, DisplayMode, Engine, Loader } from "excalibur";
 import { Sala } from "./scenes/sala";
 import { Menu } from "./scenes/menu";
 import { GameOver } from "./scenes/game-over";
+import { Configuracoes } from "./scenes/configuracoes";
 import { loadables } from "./resources";
 
+// Lê a resolução do localStorage (padrão: 320x180)
+const resolucaoSalva = localStorage.getItem("resolucao");
+const resolucao = resolucaoSalva ? JSON.parse(resolucaoSalva) : { largura: 320, altura: 180 };
+
 const game = new Engine({
-  width: 320, // resolução interna baixa = visual pixel art
-  height: 180,
+  width: resolucao.largura,
+  height: resolucao.altura,
   displayMode: DisplayMode.FitScreen,
   pixelArt: false, // sprites sem borrão ao escalar
   backgroundColor: Color.Black,
@@ -14,6 +19,7 @@ const game = new Engine({
     menu: Menu,
     sala: Sala,
     gameover: GameOver,
+    configuracoes: Configuracoes,
   },
 });
 

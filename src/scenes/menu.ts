@@ -35,7 +35,8 @@ export class Menu extends Scene {
     this.criarTexto("BERZERK", cx, 25, 16, COR_VERMELHO);
 
     this.criarMoldura();
-    this.criarBotaoJogar(cx);
+    this.criarBotao(cx, 100, "JOGAR", () => this.engine.goToScene("sala"));
+    this.criarBotao(cx, 125, "CONFIG", () => this.engine.goToScene("configuracoes"));
     this.criarInsertCoin(cx);
 
     // Rodapé (sem glifos especiais, que a fonte pode não ter)
@@ -123,17 +124,16 @@ export class Menu extends Scene {
     });
   }
 
-  // Botão JOGAR: o fundo (Rectangle) e o texto (ator filho) ficam separados
-  private criarBotaoJogar(cx: number): void {
-    const y = 110;
+  // Botão genérico: o fundo (Rectangle) e o texto (ator filho) ficam separados
+  private criarBotao(cx: number, y: number, texto: string, acao: () => void): void {
     const fundo = new Rectangle({ width: 80, height: 20, color: COR_VERDE });
 
-    const botao = new Actor({ name: "botaoJogar", pos: vec(cx, y), width: 80, height: 20 });
+    const botao = new Actor({ pos: vec(cx, y), width: 80, height: 20 });
     botao.graphics.use(fundo);
 
     // Posição do filho é relativa ao pai, então (0, 0) fica centralizado no botão
     const rotulo = new Actor({ pos: vec(0, 0) });
-    rotulo.graphics.use(new Text({ text: "JOGAR", font: this.criarFonte(8, COR_FUNDO) }));
+    rotulo.graphics.use(new Text({ text: texto, font: this.criarFonte(8, COR_FUNDO) }));
     botao.addChild(rotulo);
 
     // Cursor ">" ao lado (inicialmente invisível)
@@ -152,9 +152,7 @@ export class Menu extends Scene {
       document.body.style.cursor = "default";
     });
 
-    botao.on("pointerdown", () => {
-      this.engine.goToScene("sala");
-    });
+    botao.on("pointerdown", acao);
 
     this.add(botao);
   }
