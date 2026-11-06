@@ -2,6 +2,7 @@ import { Color, DisplayMode, Engine, Loader } from "excalibur";
 import { Sala } from "./scenes/sala";
 import { Menu } from "./scenes/menu";
 import { GameOver } from "./scenes/game-over";
+import { Configuracoes } from "./scenes/configuracoes";
 import { loadables } from "./resources";
 
 // Resolução fixa ideal para pixel art
@@ -18,6 +19,7 @@ const game = new Engine({
     menu: Menu,
     sala: Sala,
     gameover: GameOver,
+    configuracoes: Configuracoes,
   },
 });
 
