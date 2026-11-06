@@ -30,6 +30,12 @@ export class Jogador extends Actor implements Danificavel {
   }
 
   override onPreUpdate(engine: Engine, elapsed: number): void {
+    // Não executa lógica quando pausado
+    if (Estado.pausado) {
+      this.vel = vec(0, 0);
+      return;
+    }
+
     // Atualiza invencibilidade
     if (this.invencivel) {
       this.tempoInvencibilidade -= elapsed;

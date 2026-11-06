@@ -1,5 +1,5 @@
 // src/scenes/sala.ts
-import { Color, Engine, Scene, Vector, vec } from "excalibur";
+import { Color, Engine, Scene, Vector, vec, Actor, Text, Font, FontUnit, TextAlign, Keys } from "excalibur";
 import { Jogador } from "../actors/jogador";
 import { Robo } from "../actors/robos";
 import { COLUNAS, LINHAS, montarLabirinto } from "../salas/labirinto";
@@ -9,6 +9,12 @@ import { sementeDaSala } from "../salas/mapa";
 const LARGURA = 320;
 const ALTURA = 180;
 const MARGEM = 20; // distância segura da parede para a entrada
+
+// Cores
+const COR_VERDE = Color.fromHex("#33ff66");
+const COR_AMARELO = Color.fromHex("#ffd400");
+const COR_VERMELHO = Color.fromHex("#ff2d2d");
+const COR_FUNDO = Color.Black;
 
 // Direção oposta (por onde o jogador entra na sala seguinte)
 const OPOSTA: Record<Direcao, Direcao> = {
@@ -42,24 +48,205 @@ function direcaoDeEntrada(direcao: Direcao | null): Vector {
 
 export class Sala extends Scene {
   private transicaoPendente: Direcao | null = null;
+  private estaPausado = false;
+  private atoresPausa: Actor[] = [];
+  private handlerEsc: ((evt: { key: Keys }) => void) | null = null;
 
   override onInitialize(engine: Engine): void {
     this.montar(engine);
   }
 
   override onActivate(): void {
-    // Reconstrói a sala ao voltar (ex: após game over)
+    // Reseta estado de pausa ao ativar a cena
+    this.estaPausado = false;
+    Estado.pausado = false;
+    
+    // Configurar handler de ESC toda vez que a cena é ativada
+    this.configurarPausa(this.engine);
+    
+    // Sempre reconstrói a sala ao ativar (para reiniciar quando volta do menu)
     const engine = this.engine;
     if (engine) {
-      // Remove todos os atores existentes antes de reconstruir
+      // Remove todos os atores existentes
       for (const ator of [...this.actors]) {
         ator.kill();
       }
+      // Resetar estado do jogo para valores iniciais
+      Estado.coordX = 0;
+      Estado.coordY = 0;
+      Estado.portaEntrada = null;
+      Estado.hp = Estado.hpMax;
+      
       this.montar(engine);
     }
   }
 
+  override onDeactivate(): void {
+    // Remove handler de ESC ao sair da cena
+    if (this.handlerEsc && this.engine) {
+      this.engine.input.keyboard.off("press", this.handlerEsc);
+    }
+  }
+
+  private configurarPausa(engine: Engine): void {
+    this.handlerEsc = (evt: { key: Keys }) => {
+      if (evt.key === Keys.Escape) {
+        if (this.estaPausado) {
+          this.despausar();
+        } else {
+          this.pausar();
+        }
+      }
+    };
+    engine.input.keyboard.on("press", this.handlerEsc);
+  }
+
+  private pausar(): void {
+    this.estaPausado = true;
+    Estado.pausado = true;
+    this.mostrarOverlayPausa();
+  }
+
+  private despausar(): void {
+    this.estaPausado = false;
+    Estado.pausado = false;
+    this.ocultarOverlayPausa();
+  }
+
+  private criarBotao(
+    texto: string,
+    y: number,
+    cor: Color,
+    corHover: Color,
+    acao: () => void
+  ): Actor {
+    const cx = LARGURA / 2;
+    const botao = new Actor({
+      pos: vec(cx, y),
+      width: 100,
+      height: 20,
+      color: cor,
+    });
+    
+    const textoAtor = new Actor({ pos: vec(0, 0) });
+    textoAtor.graphics.use(new Text({
+      text: texto,
+      font: new Font({
+        family: "'Press Start 2P', monospace",
+        size: 8,
+        unit: FontUnit.Px,
+        color: COR_FUNDO,
+        textAlign: TextAlign.Left,
+        bold: true,
+        smoothing: false,
+      }),
+    }));
+    botao.addChild(textoAtor);
+
+    botao.on("pointerenter", () => {
+      botao.color = corHover;
+      document.body.style.cursor = "pointer";
+    });
+    botao.on("pointerleave", () => {
+      botao.color = cor;
+      document.body.style.cursor = "default";
+    });
+    botao.on("pointerdown", acao);
+
+    return botao;
+  }
+
+  private mostrarOverlayPausa(): void {
+    const cx = LARGURA / 2;
+    const cy = ALTURA / 2;
+
+    // Fundo semi-transparente
+    const fundo = new Actor({
+      pos: vec(cx, cy),
+      width: LARGURA,
+      height: ALTURA,
+      color: Color.fromHex("#000000"),
+      opacity: 0.7,
+    });
+    this.add(fundo);
+    this.atoresPausa.push(fundo);
+
+    // Título "PAUSADO"
+    const titulo = new Actor({ pos: vec(cx + 35, cy - 40) });
+    titulo.graphics.use(new Text({
+      text: "PAUSADO",
+      font: new Font({
+        family: "'Press Start 2P', monospace",
+        size: 16,
+        unit: FontUnit.Px,
+        color: COR_AMARELO,
+        textAlign: TextAlign.Center,
+        bold: true,
+        smoothing: false,
+      }),
+    }));
+    this.add(titulo);
+    this.atoresPausa.push(titulo);
+
+    // Botão Continuar
+    const botaoContinuar = this.criarBotao(
+      "CONTINUAR",
+      cy,
+      COR_VERDE,
+      COR_AMARELO,
+      () => this.despausar()
+    );
+    this.add(botaoContinuar);
+    this.atoresPausa.push(botaoContinuar);
+
+    // Botão Menu Inicial
+    const botaoMenu = this.criarBotao(
+      "MENU INICIAL",
+      cy + 30,
+      COR_VERMELHO,
+      COR_AMARELO,
+      () => this.voltarAoMenu()
+    );
+    this.add(botaoMenu);
+    this.atoresPausa.push(botaoMenu);
+
+    // Instrução
+    const instrucao = new Actor({ pos: vec(cx, cy + 60) });
+    instrucao.graphics.use(new Text({
+      text: "ESC - CONTINUAR",
+      font: new Font({
+        family: "'Press Start 2P', monospace",
+        size: 6,
+        unit: FontUnit.Px,
+        color: COR_AMARELO,
+        textAlign: TextAlign.Left,
+        smoothing: false,
+      }),
+    }));
+    this.add(instrucao);
+    this.atoresPausa.push(instrucao);
+  }
+
+  private ocultarOverlayPausa(): void {
+    for (const ator of this.atoresPausa) {
+      ator.kill();
+    }
+    this.atoresPausa = [];
+  }
+
+  private voltarAoMenu(): void {
+    this.ocultarOverlayPausa();
+    this.estaPausado = false;
+    Estado.pausado = false;
+    this.engine.goToScene("menu");
+  }
+
   override onPreUpdate(engine: Engine, _elapsed: number): void {
+    // Não executa lógica do jogo quando pausado
+    if (this.estaPausado) {
+      return;
+    }
+
     // Processa transição pendente no início do frame
     if (this.transicaoPendente) {
       const direcao = this.transicaoPendente;
