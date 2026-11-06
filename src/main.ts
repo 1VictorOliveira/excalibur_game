@@ -1,18 +1,25 @@
-import { Color, DisplayMode, Engine } from "excalibur";
+import { Color, DisplayMode, Engine, Loader } from "excalibur";
 import { Sala } from "./scenes/sala";
+import { Menu } from "./scenes/menu";
+import { loadables } from "./resources";
 
 const game = new Engine({
   width: 320, // resolução interna baixa = visual pixel art
   height: 180,
   displayMode: DisplayMode.FitScreen,
-  pixelArt: true, // sprites sem borrão ao escalar
+  pixelArt: false, // sprites sem borrão ao escalar
   backgroundColor: Color.Black,
   scenes: {
+    menu: Menu,
     sala: Sala,
   },
 });
 
-game.start("sala");
+// Pré-carrega recursos e inicia no menu
+const loader = new Loader(loadables);
+game.start(loader).then(() => {
+  game.goToScene("menu");
+});
 
 // F1 liga/desliga a visualização das caixas de colisão
 window.addEventListener("keydown", (e) => {
