@@ -1,17 +1,18 @@
 // src/actors/jogador.ts
 import { Actor, CollisionType, Color, Engine, Keys, Vector, vec } from "excalibur";
-import { Bala } from "./bala";
 import { Danificavel } from "../dano";
 import { Grupos } from "../grupos";
 import { Estado } from "../estado";
+import { Foco, Habilidade, Prisma, Reflexao } from "../luz/habilidades";
 
 export class Jogador extends Actor implements Danificavel {
   velocidade = 90; // pixels por segundo
   direcao = vec(1, 0); // última direção andada
-  recargaTiro = 250; // ms entre um tiro e outro
   hpMax = 3;
   hp = this.hpMax;
-  private tempoRecarga = 0;
+  // Habilidades de luz (issue #19). Teclas 1, 2, 3 escolhem; Q troca para a próxima.
+  habilidades: Habilidade[] = [new Reflexao(), new Foco(), new Prisma()];
+  indiceHabilidade = Estado.habilidade; // continua a mesma ao trocar de sala
   private tempoInvencibilidade = 0;
   private invencivel = false;
 
@@ -70,17 +71,25 @@ export class Jogador extends Actor implements Danificavel {
     // Espaço atira para onde o jogador está andando (estilo Berzerk original)
     if (mira.size === 0 && k.isHeld(Keys.Space)) mira.setTo(this.direcao.x, this.direcao.y);
 
-    this.tempoRecarga -= elapsed;
-    if (mira.size > 0 && this.tempoRecarga <= 0) {
-      this.atirar(mira);
-      this.tempoRecarga = this.recargaTiro;
-    }
+    // --- Troca de habilidade ---
+    if (k.wasPressed(Keys.Digit1) || k.wasPressed(Keys.Num1)) this.escolherHabilidade(0);
+    if (k.wasPressed(Keys.Digit2) || k.wasPressed(Keys.Num2)) this.escolherHabilidade(1);
+    if (k.wasPressed(Keys.Digit3) || k.wasPressed(Keys.Num3)) this.escolherHabilidade(2);
+    if (k.wasPressed(Keys.Q)) this.escolherHabilidade((this.indiceHabilidade + 1) % this.habilidades.length);
+
+    // A habilidade escolhida decide o que fazer com a mira
+    this.habilidadeAtual.atualizar(this, mira, elapsed);
   }
 
-  atirar(direcao: Vector): void {
-    // A bala nasce um pouco à frente do jogador, não dentro dele
-    const saida = this.pos.add(direcao.normalize().scale(10));
-    this.scene?.add(new Bala(saida, direcao, Grupos.tiroJogador));
+  get habilidadeAtual(): Habilidade {
+    return this.habilidades[this.indiceHabilidade];
+  }
+
+  escolherHabilidade(indice: number): void {
+    if (indice === this.indiceHabilidade) return;
+    this.habilidadeAtual.cancelar(); // ex.: perde a carga do Foco ao trocar
+    this.indiceHabilidade = indice;
+    Estado.habilidade = indice;
   }
 
   levarDano(quantidade: number): void {

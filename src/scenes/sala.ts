@@ -5,6 +5,7 @@ import { Robo } from "../actors/robos";
 import { COLUNAS, LINHAS, montarLabirinto } from "../salas/labirinto";
 import { Estado, Direcao } from "../estado";
 import { sementeDaSala } from "../salas/mapa";
+import { HudLuz } from "../ui/hud-luz";
 
 const LARGURA = 320;
 const ALTURA = 180;
@@ -306,6 +307,7 @@ export class Sala extends Scene {
     const dirEntrada = direcaoDeEntrada(Estado.portaEntrada);
     const jogador = new Jogador(posEntrada, Estado.hp, dirEntrada);
     this.add(jogador);
+    this.add(new HudLuz(jogador)); // habilidade de luz escolhida (issue #19)
 
     // Robôs nascem em células distantes da entrada
     const livres: [number, number][] = [];

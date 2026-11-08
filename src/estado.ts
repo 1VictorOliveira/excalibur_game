@@ -10,4 +10,5 @@ export const Estado = {
   hp: 3,
   hpMax: 3,
   pausado: false, // quando true, jogadores e robôs não executam lógica
+  habilidade: 0, // habilidade de luz escolhida (issue #19), mantida entre salas
 };
