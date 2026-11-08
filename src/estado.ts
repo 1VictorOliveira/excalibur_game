@@ -11,4 +11,5 @@ export const Estado = {
   hpMax: 3,
   pausado: false, // quando true, jogadores e robôs não executam lógica
   habilidade: 0, // habilidade de luz escolhida (issue #19), mantida entre salas
+  salasLimpas: new Set<string>(), // salas sem robôs ou com cristal já pego (issue #20), chave "x,y"
 };

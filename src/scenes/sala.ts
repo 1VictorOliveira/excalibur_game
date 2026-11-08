@@ -6,6 +6,9 @@ import { COLUNAS, LINHAS, montarLabirinto } from "../salas/labirinto";
 import { Estado, Direcao } from "../estado";
 import { sementeDaSala } from "../salas/mapa";
 import { HudLuz } from "../ui/hud-luz";
+import { AvisoSala } from "../ui/aviso-sala";
+import { Cristal } from "../actors/cristal";
+import { chaveDaSala, embaralhar, planejarSala } from "../salas/procedural";
 
 const LARGURA = 320;
 const ALTURA = 180;
@@ -49,13 +52,15 @@ function direcaoDeEntrada(direcao: Direcao | null): Vector {
 
 export class Sala extends Scene {
   private transicaoPendente: Direcao | null = null;
+  private salaTinhaRobos = false;
   private estaPausado = false;
   private atoresPausa: Actor[] = [];
   private handlerEsc: ((evt: { key: Keys }) => void) | null = null;
 
-  override onInitialize(engine: Engine): void {
-    this.montar(engine);
-  }
+  // A sala é montada no onActivate (que também roda na primeira vez).
+  // Montar aqui também criava a sala duas vezes: os robôs da primeira montagem
+  // chegavam a atirar antes de serem removidos, deixando balas "fantasmas".
+  override onInitialize(_engine: Engine): void {}
 
   override onActivate(): void {
     // Reseta estado de pausa ao ativar a cena
@@ -77,6 +82,7 @@ export class Sala extends Scene {
       Estado.coordY = 0;
       Estado.portaEntrada = null;
       Estado.hp = Estado.hpMax;
+      Estado.salasLimpas.clear(); // partida nova: todas as salas voltam a ter robôs
       
       this.montar(engine);
     }
@@ -260,6 +266,13 @@ export class Sala extends Scene {
     const jogador = this.actors.find(a => a.name === "jogador") as Jogador | undefined;
     if (!jogador) return;
 
+    // Sala limpa: todos os robôs morreram -> não voltam se o jogador retornar
+    if (this.salaTinhaRobos && !this.actors.some((a) => a.name === "robo")) {
+      this.salaTinhaRobos = false;
+      Estado.salasLimpas.add(chaveDaSala(Estado.coordX, Estado.coordY));
+      this.add(new AvisoSala("SALA LIMPA", "#33ff66"));
+    }
+
     const saida = this.verificarSaida(jogador);
     if (saida) {
       Estado.hp = jogador.hp;
@@ -298,9 +311,12 @@ export class Sala extends Scene {
   private montar(engine: Engine): void {
     this.backgroundColor = Color.fromHex("#0d0d14");
 
-    // Labirinto determinístico para esta sala
-    const semente = sementeDaSala(Estado.coordX, Estado.coordY);
-    const labirinto = montarLabirinto(this, engine, { semente });
+    // Plano procedural da sala: tipo, dificuldade e semente (issue #20)
+    const plano = planejarSala(Estado.coordX, Estado.coordY);
+    const chave = chaveDaSala(Estado.coordX, Estado.coordY);
+    const jaLimpa = Estado.salasLimpas.has(chave);
+
+    const labirinto = montarLabirinto(this, engine, { semente: plano.semente, estilo: plano.estilo });
 
     // Posiciona o jogador na porta de entrada
     const posEntrada = posicaoDeEntrada(Estado.portaEntrada);
@@ -309,7 +325,18 @@ export class Sala extends Scene {
     this.add(jogador);
     this.add(new HudLuz(jogador)); // habilidade de luz escolhida (issue #19)
 
-    // Robôs nascem em células distantes da entrada
+    if (plano.nome) this.add(new AvisoSala(plano.nome));
+
+    // Sala de tesouro: cristal de luz no centro (se ainda não foi pego)
+    if (plano.temCristal && !jaLimpa) {
+      this.add(new Cristal(labirinto.centroDaCelula(2, 1), chave));
+    }
+
+    // Robôs: não voltam em sala já limpa
+    const quantidadeRobos = jaLimpa ? 0 : plano.quantidadeRobos;
+    this.salaTinhaRobos = quantidadeRobos > 0;
+
+    // Nascem em células distantes da entrada, sempre nos mesmos lugares para esta sala
     const livres: [number, number][] = [];
     for (let c = 0; c < COLUNAS; c++) {
       for (let l = 0; l < LINHAS; l++) {
@@ -319,11 +346,16 @@ export class Sala extends Scene {
         }
       }
     }
-    livres.sort(() => Math.random() - 0.5);
+    const celulas = embaralhar(livres, plano.semente);
 
-    const quantidadeRobos = 3;
-    for (const [c, l] of livres.slice(0, quantidadeRobos)) {
-      this.add(new Robo(labirinto.centroDaCelula(c, l)));
+    for (let i = 0; i < quantidadeRobos; i++) {
+      const [c, l] = celulas[i % celulas.length];
+      // Mais robôs que células: os extras nascem um pouco deslocados do centro
+      const deslocamento = i >= celulas.length ? vec(12, 0) : vec(0, 0);
+      const robo = new Robo(labirinto.centroDaCelula(c, l).add(deslocamento));
+      robo.velocidade = plano.velocidadeRobo;
+      robo.recargaTiro = plano.recargaRobo;
+      this.add(robo);
     }
   }
 }
