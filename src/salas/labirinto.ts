@@ -3,6 +3,11 @@ import { Engine, Scene, Vector, vec } from "excalibur";
 import { Parede } from "../actors/parede";
 
 /*
+  Estilos de sala (issue #20):
+  - "paredes": labirinto no estilo do Berzerk original (padrão)
+  - "pilares": só blocos nos cruzamentos, sem paredes ligando -> muitos caminhos
+  - "aberto": arena quase vazia, com 2 blocos de cobertura
+
   Labirinto no estilo do Berzerk original:
   - A sala é dividida em 5 colunas x 3 linhas de células.
   - Nos 8 cruzamentos internos existem "pilares".
@@ -15,7 +20,10 @@ export const LINHAS = 3;
 
 export type Portas = { cima: boolean; baixo: boolean; esquerda: boolean; direita: boolean };
 
+export type EstiloSala = "paredes" | "pilares" | "aberto";
+
 export type OpcoesLabirinto = {
+  estilo?: EstiloSala;
   semente?: number; // mesma semente = mesmo labirinto (útil na transição entre salas)
   portas?: Partial<Portas>; // quais saídas ficam abertas (padrão: todas)
   espessura?: number;
@@ -30,7 +38,7 @@ type Direcao = "N" | "S" | "L" | "O";
 const DIRECOES: Direcao[] = ["N", "S", "L", "O"];
 
 // Gerador de números aleatórios com semente (mulberry32)
-function criarAleatorio(semente: number): () => number {
+export function criarAleatorio(semente: number): () => number {
   let a = semente >>> 0;
   return () => {
     a = (a + 0x6d2b79f5) | 0;
@@ -106,6 +114,28 @@ export function montarLabirinto(cena: Scene, engine: Engine, opcoes: OpcoesLabir
     cena.add(new Parede(L - e, meioY + porta, e, meioY));
   } else cena.add(new Parede(L - e, 0, e, A));
 
+  const resultado: ResultadoLabirinto = {
+    centroDaCelula: (coluna, linha) => vec(coluna * cw + cw / 2, linha * ch + ch / 2),
+  };
+
+  // ---------- Estilos sem labirinto ----------
+  const bloco = 10; // tamanho do bloco de pilar
+  const estilo = opcoes.estilo ?? "paredes";
+  if (estilo === "pilares") {
+    for (let i = 1; i < COLUNAS; i++) {
+      for (let j = 1; j < LINHAS; j++) {
+        cena.add(new Parede(i * cw - bloco / 2, j * ch - bloco / 2, bloco, bloco));
+      }
+    }
+    return resultado;
+  }
+  if (estilo === "aberto") {
+    // Dois blocos de cobertura, em diagonal, para a arena não ficar 100% vazia
+    cena.add(new Parede(2 * cw - bloco / 2, 1 * ch - bloco / 2, bloco, bloco));
+    cena.add(new Parede(3 * cw - bloco / 2, 2 * ch - bloco / 2, bloco, bloco));
+    return resultado;
+  }
+
   // ---------- Sorteio das paredes dos pilares ----------
   let escolhas: { i: number; j: number; d: Direcao }[] = [];
   for (let tentativa = 0; tentativa < 50; tentativa++) {
@@ -134,7 +164,5 @@ export function montarLabirinto(cena: Scene, engine: Engine, opcoes: OpcoesLabir
     }
   }
 
-  return {
-    centroDaCelula: (coluna, linha) => vec(coluna * cw + cw / 2, linha * ch + ch / 2),
-  };
+  return resultado;
 }
