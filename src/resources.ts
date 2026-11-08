@@ -3,8 +3,10 @@
 import { FontSource } from "excalibur";
 
 // Fonte arcade retrô
+// BASE_URL: "/" no PC e "/excalibur_game/" no GitHub Pages.
+// Com "/fonts/..." fixo, a fonte não carregava depois do deploy.
 export const FontArcade = new FontSource(
-  "/fonts/PressStart2P-Regular.ttf",
+  `${import.meta.env.BASE_URL}fonts/PressStart2P-Regular.ttf`,
   "PressStart2P"
 );
 
