@@ -17,9 +17,7 @@ export type PlanoSala = {
   estilo: EstiloSala;
   semente: number;
   distancia: number; // quantas salas longe do início
-  quantidadeRobos: number;
-  velocidadeRobo: number;
-  recargaRobo: number; // ms entre tiros do robô
+  quantidadeDiabretes: number;
   temCristal: boolean;
   inimigos: SpawnInimigo[];
   nome: string; // aviso que aparece ao entrar ("" = nenhum)
@@ -39,7 +37,7 @@ function finalizarPlano(plano: Omit<PlanoSala, "inimigos">): PlanoSala {
   return {
     ...plano,
     inimigos,
-    quantidadeRobos: Math.max(0, plano.quantidadeRobos - inimigos.length),
+    quantidadeDiabretes: Math.max(0, plano.quantidadeDiabretes - inimigos.length),
   };
 }
 
@@ -48,11 +46,9 @@ export function planejarSala(x: number, y: number): PlanoSala {
   const aleatorio = criarAleatorio(semente ^ 0x9e3779b9); // outra sequência, separada da do labirinto
   const distancia = Math.abs(x) + Math.abs(y);
 
-  // Dificuldade: +1 robô e robôs um pouco mais rápidos e agressivos a cada sala de distância
+  // Dificuldade: +1 inimigo a cada sala de distância
   const dificuldade = {
-    quantidadeRobos: Math.min(2 + distancia, 7),
-    velocidadeRobo: Math.min(25 + distancia * 3, 50),
-    recargaRobo: Math.max(1000 - distancia * 80, 450),
+    quantidadeDiabretes: Math.min(2 + distancia, 7),
   };
 
   // Sala inicial: sempre um labirinto calmo
@@ -67,13 +63,13 @@ export function planejarSala(x: number, y: number): PlanoSala {
   if (r < 0.12) {
     return finalizarPlano({
       tipo: "tesouro", estilo: "pilares", semente, distancia, ...dificuldade,
-      quantidadeRobos: 0, temCristal: true, nome: "TESOURO",
+      quantidadeDiabretes: 0, temCristal: true, nome: "TESOURO",
     });
   }
   if (r < 0.32) {
     return finalizarPlano({
       tipo: "arena", estilo: "aberto", semente, distancia, ...dificuldade,
-      quantidadeRobos: Math.min(dificuldade.quantidadeRobos + 2, 9), temCristal: false, nome: "ARENA",
+      quantidadeDiabretes: Math.min(dificuldade.quantidadeDiabretes + 2, 9), temCristal: false, nome: "ARENA",
     });
   }
   if (r < 0.57) {

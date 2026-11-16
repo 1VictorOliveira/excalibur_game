@@ -1,7 +1,6 @@
 // src/scenes/sala.ts
 import { Color, CollisionType, Engine, Scene, Vector, vec, Actor, Text, Keys } from "excalibur";
 import { Jogador } from "../actors/jogador";
-import { Robo } from "../actors/robos";
 import { Diabrete } from "../enemies/Diabrete";
 import { AnjoCaido } from "../enemies/AnjoCaido";
 import { Arquidemonio } from "../enemies/Arquidemonio";
@@ -98,7 +97,7 @@ export class Sala extends Scene {
       Estado.coordY = 0;
       Estado.portaEntrada = null;
       Estado.hp = Estado.hpMax;
-      Estado.salasLimpas.clear(); // partida nova: todas as salas voltam a ter robôs
+      Estado.salasLimpas.clear(); // partida nova: todas as salas voltam a ter inimigos
       
       this.montar(engine);
     }
@@ -136,7 +135,7 @@ export class Sala extends Scene {
     this.estaPausado = true;
     Estado.pausado = true;
     // Congela o TEMPO do jogo inteiro: balas, ações, partículas e timers param juntos.
-    // Antes só jogador e robôs paravam; as balas continuavam voando.
+    // Antes só jogador e inimigos paravam; as balas continuavam voando.
     this.engine.timescale = 0;
     this.mostrarOverlayPausa();
   }
@@ -354,9 +353,9 @@ export class Sala extends Scene {
     }
 
     // Inimigos: não voltam em sala já limpa
-    const quantidadeRobos = jaLimpa ? 0 : plano.quantidadeRobos;
+    const quantidadeDiabretes = jaLimpa ? 0 : plano.quantidadeDiabretes;
     const inimigos = jaLimpa ? [] : plano.inimigos;
-    this.salaTinhaInimigos = quantidadeRobos + inimigos.length > 0;
+    this.salaTinhaInimigos = quantidadeDiabretes + inimigos.length > 0;
 
     // Nascem em células distantes da entrada, sempre nos mesmos lugares para esta sala
     const ocupadas = new Set(inimigos.map(({ celula }) => `${celula[0]},${celula[1]}`));
@@ -371,14 +370,11 @@ export class Sala extends Scene {
     }
     const celulas = embaralhar(livres, plano.semente);
 
-    for (let i = 0; i < quantidadeRobos; i++) {
+    for (let i = 0; i < quantidadeDiabretes; i++) {
       const [c, l] = celulas[i % celulas.length];
-      // Mais robôs que células: os extras nascem um pouco deslocados do centro
+      // Mais inimigos que células: os extras nascem um pouco deslocados do centro
       const deslocamento = i >= celulas.length ? vec(12, 0) : vec(0, 0);
-      const robo = new Robo(labirinto.centroDaCelula(c, l).add(deslocamento), labirinto);
-      robo.velocidade = plano.velocidadeRobo;
-      robo.recargaTiro = plano.recargaRobo;
-      this.add(robo);
+      this.add(new Diabrete(labirinto.centroDaCelula(c, l).add(deslocamento)));
     }
 
     for (const marcador of inimigos) {
