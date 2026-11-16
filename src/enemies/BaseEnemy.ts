@@ -1,6 +1,7 @@
-import { Actor, Animation, CollisionType, Color, Engine, Vector, vec } from "excalibur";
+import { Actor, Animation, CollisionType, Color, Engine, Ray, Vector, vec } from "excalibur";
 import { getAnimation } from "../../assets/animations";
 import { Jogador } from "../actors/jogador";
+import { Parede } from "../actors/parede";
 import { Danificavel } from "../dano";
 import { Estado } from "../estado";
 import { Grupos } from "../grupos";
@@ -37,7 +38,7 @@ export abstract class BaseEnemy extends Actor implements Danificavel {
   private timer: number = this.phaseDuration;
   private durations: EnemyDurations;
   private hp: number;
-  private readonly speed: number;
+  protected readonly speed: number;
   private readonly telegraphVisual: Actor;
   private readonly effects = new Set<Actor>();
   private animation?: Animation;
@@ -80,6 +81,26 @@ export abstract class BaseEnemy extends Actor implements Danificavel {
     return true;
   }
 
+  protected onChase(_elapsedSeconds: number): boolean {
+    this.chasePlayer();
+    return true;
+  }
+
+  protected hasLineOfSight(): boolean {
+    const player = this.player;
+    const scene = this.scene;
+    if (!player || !scene) return false;
+    const direction = player.pos.sub(this.pos);
+    const distance = direction.size;
+    if (distance === 0) return true;
+    const hits = scene.physics.rayCast(new Ray(this.pos, direction.normalize()), {
+      maxDistance: distance,
+      searchAllColliders: true,
+      filter: (hit) => hit.collider.owner instanceof Parede,
+    });
+    return hits.length === 0;
+  }
+
   get currentPhase(): EnemyPhase {
     return this.phase;
   }
@@ -113,10 +134,11 @@ export abstract class BaseEnemy extends Actor implements Danificavel {
       this.vel = Vector.Zero;
       return;
     }
-    if (this.phase === EnemyPhase.IdleChase) this.chasePlayer();
+    const elapsedSeconds = elapsed / ENEMY_CONFIG.shared.millisecondsPerSecond;
+    let canAttack = true;
+    if (this.phase === EnemyPhase.IdleChase) canAttack = this.onChase(elapsedSeconds);
     else this.vel = Vector.Zero;
 
-    const elapsedSeconds = elapsed / ENEMY_CONFIG.shared.millisecondsPerSecond;
     this.timer -= elapsedSeconds;
     const progress = 1 - Math.max(this.timer, 0) / this.phaseDuration;
     if (this.phase === EnemyPhase.Telegraph) {
@@ -127,8 +149,10 @@ export abstract class BaseEnemy extends Actor implements Danificavel {
     this.onPhaseUpdate(progress, elapsedSeconds);
     if (this.timer > 0) return;
 
-    if (this.phase === EnemyPhase.IdleChase) this.beginTelegraph();
-    else if (this.phase === EnemyPhase.Telegraph) this.beginAttack();
+    if (this.phase === EnemyPhase.IdleChase) {
+      if (canAttack) this.beginTelegraph();
+      else this.setTimer(ENEMY_CONFIG.shared.idleChase);
+    } else if (this.phase === EnemyPhase.Telegraph) this.beginAttack();
     else if (this.phase === EnemyPhase.Attack) this.enterPhase(EnemyPhase.Cooldown, this.durations.cooldown);
     else this.enterPhase(EnemyPhase.IdleChase, ENEMY_CONFIG.shared.idleChase);
   }
@@ -144,7 +168,7 @@ export abstract class BaseEnemy extends Actor implements Danificavel {
     this.actions.blink(hitBlinkDuration, hitBlinkInterval, hitBlinkCount);
   }
 
-  private chasePlayer(): void {
+  protected chasePlayer(): void {
     const player = this.player;
     if (!player) return;
     const direction = player.pos.sub(this.pos);

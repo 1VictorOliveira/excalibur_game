@@ -31,6 +31,7 @@ export const ENEMY_CONFIG = {
     telegraph: 0.4,
     attack: 0.1,
     cooldown: 2.0,
+    patrolTurnInterval: 1.5,
     projectileSpeed: 120,
     projectileRadius: 3,
     projectileSpawnOffset: 10,
