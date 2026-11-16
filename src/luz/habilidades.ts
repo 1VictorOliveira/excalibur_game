@@ -3,6 +3,7 @@ import { Actor, Color, Vector } from "excalibur";
 import { Bala } from "../actors/bala";
 import { Grupos } from "../grupos";
 import { FeixeRefletido, RaioFocado } from "./projeteis";
+import { saidaLivre } from "../colisao";
 
 /*
   As "armas" do jogo são aplicações da física da luz.
@@ -26,9 +27,12 @@ export class Reflexao implements Habilidade {
   atualizar(jogador: Actor, mira: Vector, elapsed: number): void {
     this.recarga -= elapsed;
     if (mira.size === 0 || this.recarga > 0) return;
-    const saida = jogador.pos.add(mira.normalize().scale(10));
-    jogador.scene?.add(new FeixeRefletido(saida, mira, this.cor, 3));
     this.recarga = 450;
+    const cena = jogador.scene;
+    // Colado numa parede, o feixe não nasce do outro lado dela
+    if (!cena || !saidaLivre(cena, jogador.pos, mira, 10, 2)) return;
+    const saida = jogador.pos.add(mira.normalize().scale(10));
+    cena.add(new FeixeRefletido(saida, mira, this.cor, 3));
   }
   cancelar(): void {}
   carga(): number {
@@ -88,6 +92,7 @@ export class Prisma implements Habilidade {
     const base = mira.toAngle();
     [-1, 0, 1].forEach((lado, i) => {
       const dir = Vector.fromAngle(base + lado * this.abertura);
+      if (!jogador.scene || !saidaLivre(jogador.scene, jogador.pos, dir, 10, 2)) return; // raio bloqueado pela parede
       const saida = jogador.pos.add(dir.scale(10));
       const raio = new Bala(saida, dir, Grupos.tiroJogador, this.cores[i]);
       raio.actions.clearActions();

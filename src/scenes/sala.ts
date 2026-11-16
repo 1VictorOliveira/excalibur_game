@@ -1,5 +1,5 @@
 // src/scenes/sala.ts
-import { Color, Engine, Scene, Vector, vec, Actor, Text, Font, FontUnit, TextAlign, Keys } from "excalibur";
+import { Color, CollisionType, Engine, Scene, Vector, vec, Actor, Text, Keys } from "excalibur";
 import { Jogador } from "../actors/jogador";
 import { Robo } from "../actors/robos";
 import { COLUNAS, LINHAS, montarLabirinto } from "../salas/labirinto";
@@ -7,8 +7,13 @@ import { Estado, Direcao } from "../estado";
 import { sementeDaSala } from "../salas/mapa";
 import { HudLuz } from "../ui/hud-luz";
 import { AvisoSala } from "../ui/aviso-sala";
+import { TextoAnimado } from "../ui/texto-animado";
 import { Cristal } from "../actors/cristal";
 import { chaveDaSala, embaralhar, planejarSala } from "../salas/procedural";
+import { HudVida } from "../ui/hud-vida";
+import { fontePixel } from "../ui/fonte";
+import { cortina } from "../efeitos";
+import { Resources } from "../resources";
 
 const LARGURA = 320;
 const ALTURA = 180;
@@ -53,6 +58,7 @@ function direcaoDeEntrada(direcao: Direcao | null): Vector {
 export class Sala extends Scene {
   private transicaoPendente: Direcao | null = null;
   private salaTinhaRobos = false;
+  private avisoNome: TextoAnimado | null = null; // nome da sala na tela (sprite do Figma)
   private estaPausado = false;
   private atoresPausa: Actor[] = [];
   private handlerEsc: ((evt: { key: Keys }) => void) | null = null;
@@ -66,6 +72,7 @@ export class Sala extends Scene {
     // Reseta estado de pausa ao ativar a cena
     this.estaPausado = false;
     Estado.pausado = false;
+    this.engine.timescale = 1;
     
     // Configurar handler de ESC toda vez que a cena é ativada
     this.configurarPausa(this.engine);
@@ -93,6 +100,11 @@ export class Sala extends Scene {
     if (this.handlerEsc && this.engine) {
       this.engine.input.keyboard.off("press", this.handlerEsc);
     }
+    // Nunca deixa outra cena (menu, game over) herdar o tempo parado da pausa
+    this.ocultarOverlayPausa();
+    this.estaPausado = false;
+    Estado.pausado = false;
+    this.engine.timescale = 1;
   }
 
   private configurarPausa(engine: Engine): void {
@@ -109,14 +121,21 @@ export class Sala extends Scene {
   }
 
   private pausar(): void {
+    // Sem pausa durante a animação de morte (o game over chega logo em seguida)
+    const jogador = this.actors.find((a) => a.name === "jogador") as Jogador | undefined;
+    if (!jogador || jogador.estaMorto) return;
     this.estaPausado = true;
     Estado.pausado = true;
+    // Congela o TEMPO do jogo inteiro: balas, ações, partículas e timers param juntos.
+    // Antes só jogador e robôs paravam; as balas continuavam voando.
+    this.engine.timescale = 0;
     this.mostrarOverlayPausa();
   }
 
   private despausar(): void {
     this.estaPausado = false;
     Estado.pausado = false;
+    this.engine.timescale = 1;
     this.ocultarOverlayPausa();
   }
 
@@ -130,24 +149,16 @@ export class Sala extends Scene {
     const cx = LARGURA / 2;
     const botao = new Actor({
       pos: vec(cx, y),
-      width: 100,
+      width: 110,
       height: 20,
       color: cor,
+      z: 501,
+      // Sem colisão física: antes o botão (e o fundo da pausa) "comiam" as balas
+      collisionType: CollisionType.PreventCollision,
     });
-    
+
     const textoAtor = new Actor({ pos: vec(0, 0) });
-    textoAtor.graphics.use(new Text({
-      text: texto,
-      font: new Font({
-        family: "'Press Start 2P', monospace",
-        size: 8,
-        unit: FontUnit.Px,
-        color: COR_FUNDO,
-        textAlign: TextAlign.Left,
-        bold: true,
-        smoothing: false,
-      }),
-    }));
+    textoAtor.graphics.use(new Text({ text: texto, font: fontePixel(8, COR_FUNDO) }));
     botao.addChild(textoAtor);
 
     botao.on("pointerenter", () => {
@@ -174,24 +185,16 @@ export class Sala extends Scene {
       height: ALTURA,
       color: Color.fromHex("#000000"),
       opacity: 0.7,
+      z: 500, // por cima do HUD
+      // Sem isso, o fundo da pausa era uma "parede" do tamanho da tela e apagava todas as balas
+      collisionType: CollisionType.PreventCollision,
     });
     this.add(fundo);
     this.atoresPausa.push(fundo);
 
     // Título "PAUSADO"
-    const titulo = new Actor({ pos: vec(cx + 35, cy - 40) });
-    titulo.graphics.use(new Text({
-      text: "PAUSADO",
-      font: new Font({
-        family: "'Press Start 2P', monospace",
-        size: 16,
-        unit: FontUnit.Px,
-        color: COR_AMARELO,
-        textAlign: TextAlign.Center,
-        bold: true,
-        smoothing: false,
-      }),
-    }));
+    const titulo = new Actor({ pos: vec(cx, cy - 40), z: 501 });
+    titulo.graphics.use(new Text({ text: "PAUSADO", font: fontePixel(16, COR_AMARELO) }));
     this.add(titulo);
     this.atoresPausa.push(titulo);
 
@@ -218,18 +221,8 @@ export class Sala extends Scene {
     this.atoresPausa.push(botaoMenu);
 
     // Instrução
-    const instrucao = new Actor({ pos: vec(cx, cy + 60) });
-    instrucao.graphics.use(new Text({
-      text: "ESC - CONTINUAR",
-      font: new Font({
-        family: "'Press Start 2P', monospace",
-        size: 6,
-        unit: FontUnit.Px,
-        color: COR_AMARELO,
-        textAlign: TextAlign.Left,
-        smoothing: false,
-      }),
-    }));
+    const instrucao = new Actor({ pos: vec(cx, cy + 60), z: 501 });
+    instrucao.graphics.use(new Text({ text: "ESC - CONTINUAR", font: fontePixel(8, COR_AMARELO) }));
     this.add(instrucao);
     this.atoresPausa.push(instrucao);
   }
@@ -245,6 +238,7 @@ export class Sala extends Scene {
     this.ocultarOverlayPausa();
     this.estaPausado = false;
     Estado.pausado = false;
+    this.engine.timescale = 1;
     this.engine.goToScene("menu");
   }
 
@@ -270,7 +264,13 @@ export class Sala extends Scene {
     if (this.salaTinhaRobos && !this.actors.some((a) => a.name === "robo")) {
       this.salaTinhaRobos = false;
       Estado.salasLimpas.add(chaveDaSala(Estado.coordX, Estado.coordY));
-      this.add(new AvisoSala("SALA LIMPA", "#33ff66"));
+      // "SALA PURIFICADA" do Figma: abre numa linha de luz, brilha e vira poeira dourada.
+      // Se o nome da sala ainda estiver na tela, ele sai primeiro (senão os dois se sobrepõem).
+      const nomeNaTela = this.avisoNome && !this.avisoNome.isKilled();
+      if (nomeNaTela) this.avisoNome!.sair();
+      const purificada = new TextoAnimado(Resources.SalaPurificada, 159, 22, vec(LARGURA / 2, 22), { duracao: 1400 });
+      if (nomeNaTela) engine.clock.schedule(() => this.add(purificada), 400);
+      else this.add(purificada);
     }
 
     const saida = this.verificarSaida(jogador);
@@ -313,6 +313,7 @@ export class Sala extends Scene {
 
     // Plano procedural da sala: tipo, dificuldade e semente (issue #20)
     const plano = planejarSala(Estado.coordX, Estado.coordY);
+    this.avisoNome = null;
     const chave = chaveDaSala(Estado.coordX, Estado.coordY);
     const jaLimpa = Estado.salasLimpas.has(chave);
 
@@ -323,9 +324,17 @@ export class Sala extends Scene {
     const dirEntrada = direcaoDeEntrada(Estado.portaEntrada);
     const jogador = new Jogador(posEntrada, Estado.hp, dirEntrada);
     this.add(jogador);
+    jogador.ficarInvencivel(1000); // 1 s de proteção ao entrar: ninguém morre no 1º quadro da sala
     this.add(new HudLuz(jogador)); // habilidade de luz escolhida (issue #19)
+    this.add(new HudVida(jogador));
 
-    if (plano.nome) this.add(new AvisoSala(plano.nome));
+    if (plano.tipo === "inicio") {
+      // Sala inicial: nome desenhado no Figma
+      this.avisoNome = new TextoAnimado(Resources.SalaSantuario, 181, 22, vec(LARGURA / 2, 22), { duracao: 1400 });
+      this.add(this.avisoNome);
+    } else if (plano.nome) {
+      this.add(new AvisoSala(plano.nome)); // os outros nomes ainda são texto (sprites ainda não feitos)
+    }
 
     // Sala de tesouro: cristal de luz no centro (se ainda não foi pego)
     if (plano.temCristal && !jaLimpa) {
@@ -352,10 +361,13 @@ export class Sala extends Scene {
       const [c, l] = celulas[i % celulas.length];
       // Mais robôs que células: os extras nascem um pouco deslocados do centro
       const deslocamento = i >= celulas.length ? vec(12, 0) : vec(0, 0);
-      const robo = new Robo(labirinto.centroDaCelula(c, l).add(deslocamento));
+      const robo = new Robo(labirinto.centroDaCelula(c, l).add(deslocamento), labirinto);
       robo.velocidade = plano.velocidadeRobo;
       robo.recargaTiro = plano.recargaRobo;
       this.add(robo);
     }
+
+    // Some uma tela preta rápida: a troca de sala deixa de ser um corte seco
+    cortina(this, LARGURA, ALTURA);
   }
 }

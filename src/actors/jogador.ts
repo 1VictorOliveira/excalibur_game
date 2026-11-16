@@ -4,6 +4,7 @@ import { Danificavel } from "../dano";
 import { Grupos } from "../grupos";
 import { Estado } from "../estado";
 import { Foco, Habilidade, Prisma, Reflexao } from "../luz/habilidades";
+import { estouro } from "../efeitos";
 
 export class Jogador extends Actor implements Danificavel {
   velocidade = 90; // pixels por segundo
@@ -15,6 +16,7 @@ export class Jogador extends Actor implements Danificavel {
   indiceHabilidade = Estado.habilidade; // continua a mesma ao trocar de sala
   private tempoInvencibilidade = 0;
   private invencivel = false;
+  private morto = false;
 
   constructor(pos: Vector, hp: number = 3, direcaoInicial: Vector = vec(1, 0)) {
     super({
@@ -92,21 +94,44 @@ export class Jogador extends Actor implements Danificavel {
     Estado.habilidade = indice;
   }
 
+  // Proteção curta (pisca): ao levar dano e ao entrar numa sala nova
+  ficarInvencivel(ms: number): void {
+    this.invencivel = true;
+    this.tempoInvencibilidade = ms;
+    this.actions.clearActions();
+    this.actions.blink(80, 80, Math.max(1, Math.round(ms / 160)));
+  }
+
+  get estaMorto(): boolean {
+    return this.morto;
+  }
+
   levarDano(quantidade: number): void {
-    if (this.invencivel) return;
-    
+    // "morto": evita levar dano de novo no mesmo quadro e chamar o game over duas vezes
+    if (this.invencivel || this.morto) return;
+
     this.hp -= quantidade;
     Estado.hp = this.hp;
-    
+    this.scene?.camera.shake(2, 2, 150); // tranco na tela: o jogador sente o golpe
+
     if (this.hp <= 0) {
-      this.kill();
-      // Transiciona para tela de game over
-      this.scene?.engine.goToScene("gameover");
+      this.morrer();
     } else {
-      // Blink e invencibilidade temporária (1 segundo)
-      this.actions.blink(80, 80, 5);
-      this.invencivel = true;
-      this.tempoInvencibilidade = 1000;
+      this.ficarInvencivel(1000);
     }
+  }
+
+  // Antes o jogador sumia e a tela de game over abria no mesmo instante.
+  // Agora ele explode, a tela treme e o game over vem 1 s depois.
+  private morrer(): void {
+    this.morto = true;
+    const cena = this.scene;
+    if (!cena) return;
+    estouro(cena, this.pos, 6, 14);
+    cena.camera.shake(4, 4, 400);
+    this.kill();
+    cena.engine.clock.schedule(() => {
+      if (cena.engine.currentScene === cena) cena.engine.goToScene("gameover");
+    }, 1000);
   }
 }
