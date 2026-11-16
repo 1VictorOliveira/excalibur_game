@@ -29,8 +29,11 @@ export class Arquidemonio extends BaseEnemy {
     }
     this.beam = new Actor({ width: config.far.beamLength, height: config.far.lineWidth,
       color: config.far.color, collisionType: CollisionType.PreventCollision });
-    this.scene?.add(this.beam);
+    this.addEffect(this.beam);
     this.updateAim();
+  }
+  protected override shouldAnimateTelegraph(): boolean {
+    return this.near;
   }
   protected onAttack(): void {
     const config = ENEMY_CONFIG.arquidemonio;
@@ -39,7 +42,7 @@ export class Arquidemonio extends BaseEnemy {
       this.ring.graphics.use(new Circle({ radius: config.near.ringEndRadius, color: config.near.fillColor,
         strokeColor: config.near.warningColor, lineWidth: config.near.ringThickness }));
       this.ring.scale = Vector.Zero;
-      this.scene?.add(this.ring);
+      this.addEffect(this.ring);
       return;
     }
     if (!this.beam || !this.player) return;

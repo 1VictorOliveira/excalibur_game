@@ -37,7 +37,7 @@ export class Diabrete extends BaseEnemy {
       config.projectileRadius,
     );
     projectile.dano = config.damage;
-    this.scene?.add(projectile);
+    this.addEffect(projectile);
   }
 
   protected override onPhaseUpdate(progress: number): void {

@@ -6,6 +6,7 @@ import { GameOver } from "./scenes/game-over";
 import { Configuracoes } from "./scenes/configuracoes";
 import { TesteInimigos } from "./scenes/teste-inimigos";
 import { loadables } from "./resources";
+import { loadAllSprites } from "../assets/animations";
 
 // Resolução fixa ideal para pixel art
 const LARGURA = 320;
@@ -15,7 +16,8 @@ const game = new Engine({
   width: LARGURA,
   height: ALTURA,
   displayMode: DisplayMode.FitScreen,
-  pixelArt: false,
+  pixelArt: true,
+  antialiasing: false,
   backgroundColor: Color.Black,
   scenes: {
     menu: Menu,
@@ -28,7 +30,7 @@ const game = new Engine({
 
 // Pré-carrega recursos e inicia no menu.
 // Carregador próprio: sem a tela azul e sem o botão "Play game" do Excalibur.
-const loader = new Carregador({ loadables });
+const loader = loadAllSprites(new Carregador({ loadables }));
 game.start(loader).then(() => {
   game.goToScene("menu");
 });

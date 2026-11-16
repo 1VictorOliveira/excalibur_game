@@ -1,6 +1,8 @@
 import { Color } from "excalibur";
 
 export const ENEMY_CONFIG = {
+  spriteScale: 2,
+  spriteFrameMs: 120,
   shared: {
     width: 12,
     height: 16,

@@ -42,7 +42,7 @@ export class AnjoCaido extends BaseEnemy {
         collisionType: CollisionType.PreventCollision,
       }));
     }
-    this.scene?.add(this.runes);
+    this.addEffect(this.runes);
   }
 
   protected onAttack(): void {
@@ -55,7 +55,7 @@ export class AnjoCaido extends BaseEnemy {
       color: config.spearColor,
       collisionType: CollisionType.PreventCollision,
     });
-    this.scene?.add(this.spear);
+    this.addEffect(this.spear);
     if (this.player && this.player.pos.distance(this.target) <= config.areaRadius) {
       this.damagePlayer(config.damage);
     }

@@ -1,0 +1,53 @@
+{
+  "diabrete": {
+    "idle": {
+      "pattern": "../src/assets/sprites/frames/diabrete/diabrete_neutral_{i}.png",
+      "frames": 1,
+      "loop": true
+    },
+    "walk": {
+      "pattern": "../src/assets/sprites/frames/diabrete/diabrete_scuttle_{i}.png",
+      "frames": 4,
+      "loop": true
+    },
+    "die": {
+      "pattern": "../src/assets/sprites/frames/diabrete/diabrete_holy_destruction_{i}.png",
+      "frames": 6,
+      "loop": false
+    }
+  },
+  "anjo-caido": {
+    "idle": {
+      "pattern": "../src/assets/sprites/frames/anjo/anjo_neutral_{i}.png",
+      "frames": 1,
+      "loop": true
+    },
+    "walk": {
+      "pattern": "../src/assets/sprites/frames/anjo/anjo_hover_{i}.png",
+      "frames": 4,
+      "loop": true
+    },
+    "die": {
+      "pattern": "../src/assets/sprites/frames/anjo/anjo_purification_{i}.png",
+      "frames": 6,
+      "loop": false
+    }
+  },
+  "arquidemonio": {
+    "idle": {
+      "pattern": "../src/assets/sprites/frames/arqui/arqui_neutral_{i}.png",
+      "frames": 1,
+      "loop": true
+    },
+    "telegraph": {
+      "pattern": "../src/assets/sprites/frames/arqui/arqui_stomp_{i}.png",
+      "frames": 4,
+      "loop": false
+    },
+    "die": {
+      "pattern": "../src/assets/sprites/frames/arqui/arqui_holy_destruction_{i}.png",
+      "frames": 6,
+      "loop": false
+    }
+  }
+}

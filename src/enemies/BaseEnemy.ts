@@ -1,4 +1,5 @@
-import { Actor, CollisionType, Color, Engine, Vector, vec } from "excalibur";
+import { Actor, Animation, CollisionType, Color, Engine, Vector, vec } from "excalibur";
+import { getAnimation } from "../../assets/animations";
 import { Jogador } from "../actors/jogador";
 import { Danificavel } from "../dano";
 import { Estado } from "../estado";
@@ -36,6 +37,8 @@ export abstract class BaseEnemy extends Actor implements Danificavel {
   private hp: number;
   private readonly speed: number;
   private readonly telegraphVisual: Actor;
+  private readonly effects = new Set<Actor>();
+  private animation?: Animation;
   private destroyed = false;
 
   protected constructor(pos: Vector, protected readonly options: BaseEnemyOptions) {
@@ -63,12 +66,17 @@ export abstract class BaseEnemy extends Actor implements Danificavel {
     });
     this.telegraphVisual.graphics.visible = false;
     this.addChild(this.telegraphVisual);
+    if (!this.setAnimation("walk")) this.setAnimation("idle");
   }
 
   protected abstract onTelegraph(): void;
   protected abstract onAttack(): void;
 
   protected onPhaseUpdate(_progress: number, _elapsedSeconds: number): void {}
+
+  protected shouldAnimateTelegraph(): boolean {
+    return true;
+  }
 
   get currentPhase(): EnemyPhase {
     return this.phase;
@@ -82,12 +90,24 @@ export abstract class BaseEnemy extends Actor implements Danificavel {
     this.durations = durations;
   }
 
+  protected addEffect<T extends Actor>(effect: T): T {
+    this.effects.add(effect);
+    this.scene?.add(effect);
+    return effect;
+  }
+
   protected damagePlayer(damage: number, player = this.player): void {
-    if (this.phase === EnemyPhase.Attack && player) player.levarDano(damage);
+    if (!this.destroyed && this.phase === EnemyPhase.Attack && player) player.levarDano(damage);
   }
 
   override onPreUpdate(_engine: Engine, elapsed: number): void {
-    if (Estado.pausado || !this.player) {
+    for (const effect of this.effects) {
+      if (effect.isKilled()) this.effects.delete(effect);
+    }
+    if (this.destroyed) return;
+    const player = this.player;
+    if (this.animation && player) this.animation.flipHorizontal = player.pos.x < this.pos.x;
+    if (Estado.pausado || !player) {
       this.vel = Vector.Zero;
       return;
     }
@@ -115,8 +135,7 @@ export abstract class BaseEnemy extends Actor implements Danificavel {
     if (this.destroyed) return;
     this.hp -= quantity;
     if (this.hp <= 0) {
-      this.destroyed = true;
-      this.kill();
+      this.beginDeath();
       return;
     }
     const { hitBlinkDuration, hitBlinkInterval, hitBlinkCount } = ENEMY_CONFIG.shared;
@@ -134,10 +153,16 @@ export abstract class BaseEnemy extends Actor implements Danificavel {
 
   private beginTelegraph(): void {
     this.phase = EnemyPhase.Telegraph;
-    this.telegraphVisual.graphics.visible = true;
-    this.telegraphVisual.graphics.opacity = ENEMY_CONFIG.shared.telegraphMinOpacity;
     this.onTelegraph();
     this.setTimer(this.durations.telegraph);
+    const useSprite = this.shouldAnimateTelegraph();
+    const animated = useSprite && this.setAnimation(
+      "telegraph",
+      this.durations.telegraph * ENEMY_CONFIG.shared.millisecondsPerSecond,
+    );
+    if (!animated) this.setAnimation("idle");
+    this.telegraphVisual.graphics.visible = useSprite && !animated;
+    this.telegraphVisual.graphics.opacity = ENEMY_CONFIG.shared.telegraphMinOpacity;
   }
 
   private beginAttack(): void {
@@ -145,11 +170,46 @@ export abstract class BaseEnemy extends Actor implements Danificavel {
     this.telegraphVisual.graphics.visible = false;
     this.onAttack();
     this.setTimer(this.durations.attack);
+    if (!this.setAnimation(
+      "attack",
+      this.durations.attack * ENEMY_CONFIG.shared.millisecondsPerSecond,
+    )) this.setAnimation("idle");
+  }
+
+  private beginDeath(): void {
+    this.destroyed = true;
+    this.vel = Vector.Zero;
+    this.body.collisionType = CollisionType.PreventCollision;
+    this.actions.clearActions();
+    this.graphics.visible = true;
+    this.graphics.opacity = ENEMY_CONFIG.shared.maxProgress;
+    for (const child of this.children) child.kill();
+    for (const effect of this.effects) {
+      effect.body.collisionType = CollisionType.PreventCollision;
+      effect.kill();
+    }
+    this.effects.clear();
+    if (!this.setAnimation("die")) {
+      this.kill();
+      return;
+    }
+    this.animation?.events.once("end", () => this.kill());
   }
 
   private enterPhase(phase: EnemyPhase, duration: number): void {
     this.phase = phase;
     this.setTimer(duration);
+    if (phase === EnemyPhase.Cooldown) this.setAnimation("idle");
+    else if (!this.setAnimation("walk")) this.setAnimation("idle");
+  }
+
+  private setAnimation(name: string, durationMs?: number): boolean {
+    const animation = getAnimation(this.options.name, name, durationMs);
+    if (!animation) return false;
+    animation.scale = vec(ENEMY_CONFIG.spriteScale, ENEMY_CONFIG.spriteScale);
+    this.animation = animation;
+    this.graphics.use(animation);
+    return true;
   }
 
   private setTimer(duration: number): void {
