@@ -4,6 +4,7 @@ import { Sala } from "./scenes/sala";
 import { Menu } from "./scenes/menu";
 import { GameOver } from "./scenes/game-over";
 import { Configuracoes } from "./scenes/configuracoes";
+import { TesteInimigos } from "./scenes/teste-inimigos";
 import { loadables } from "./resources";
 
 // Resolução fixa ideal para pixel art
@@ -21,6 +22,7 @@ const game = new Engine({
     sala: Sala,
     gameover: GameOver,
     configuracoes: Configuracoes,
+    "teste-inimigos": TesteInimigos,
   },
 });
 
@@ -46,5 +48,9 @@ window.addEventListener("keydown", (e) => {
   if (e.key === "F1") {
     e.preventDefault();
     game.toggleDebug();
+  }
+  if (e.key === "F2" && import.meta.env.DEV) {
+    e.preventDefault();
+    void game.goToScene("teste-inimigos");
   }
 });

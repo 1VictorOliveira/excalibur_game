@@ -2,6 +2,7 @@
 import { Color, Engine, Scene, Vector, vec, Actor, Text, Font, FontUnit, TextAlign, Keys } from "excalibur";
 import { Jogador } from "../actors/jogador";
 import { Robo } from "../actors/robos";
+import { AnjoCaido } from "../actors/anjo-caido";
 import { COLUNAS, LINHAS, montarLabirinto } from "../salas/labirinto";
 import { Estado, Direcao } from "../estado";
 import { sementeDaSala } from "../salas/mapa";
@@ -266,8 +267,9 @@ export class Sala extends Scene {
     const jogador = this.actors.find(a => a.name === "jogador") as Jogador | undefined;
     if (!jogador) return;
 
-    // Sala limpa: todos os robôs morreram -> não voltam se o jogador retornar
-    if (this.salaTinhaRobos && !this.actors.some((a) => a.name === "robo")) {
+    // Sala limpa: todos os inimigos morreram -> não voltam se o jogador retornar
+    const temInimigos = this.actors.some((a) => a.name === "robo" || a.name === "anjo-caido");
+    if (this.salaTinhaRobos && !temInimigos) {
       this.salaTinhaRobos = false;
       Estado.salasLimpas.add(chaveDaSala(Estado.coordX, Estado.coordY));
       this.add(new AvisoSala("SALA LIMPA", "#33ff66"));
@@ -332,30 +334,18 @@ export class Sala extends Scene {
       this.add(new Cristal(labirinto.centroDaCelula(2, 1), chave));
     }
 
-    // Robôs: não voltam em sala já limpa
-    const quantidadeRobos = jaLimpa ? 0 : plano.quantidadeRobos;
-    this.salaTinhaRobos = quantidadeRobos > 0;
-
-    // Nascem em células distantes da entrada, sempre nos mesmos lugares para esta sala
-    const livres: [number, number][] = [];
-    for (let c = 0; c < COLUNAS; c++) {
-      for (let l = 0; l < LINHAS; l++) {
-        const centro = labirinto.centroDaCelula(c, l);
-        if (centro.distance(posEntrada) > 50) {
-          livres.push([c, l]);
-        }
-      }
-    }
-    const celulas = embaralhar(livres, plano.semente);
-
-    for (let i = 0; i < quantidadeRobos; i++) {
-      const [c, l] = celulas[i % celulas.length];
-      // Mais robôs que células: os extras nascem um pouco deslocados do centro
-      const deslocamento = i >= celulas.length ? vec(12, 0) : vec(0, 0);
-      const robo = new Robo(labirinto.centroDaCelula(c, l).add(deslocamento));
-      robo.velocidade = plano.velocidadeRobo;
-      robo.recargaTiro = plano.recargaRobo;
-      this.add(robo);
+    // Anjo Caído: substitui robôs na primeira sala (temporariamente)
+    if (plano.distancia === 0 && !jaLimpa) {
+      this.salaTinhaRobos = true;
+      // Spawna no centro da sala (posição segura, longe das paredes)
+      const posicaoAnjo = vec(LARGURA / 2, ALTURA / 2);
+      console.log(`[Sala] Spawnando Anjo Caído em (${posicaoAnjo.x}, ${posicaoAnjo.y})`);
+      const anjo = new AnjoCaido(posicaoAnjo);
+      this.add(anjo);
+      console.log(`[Sala] Anjo adicionado à cena. Total de atores: ${this.actors.length}`);
+    } else {
+      // Sem robôs nas outras salas por enquanto
+      this.salaTinhaRobos = false;
     }
   }
 }
