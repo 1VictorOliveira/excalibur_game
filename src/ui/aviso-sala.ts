@@ -2,7 +2,7 @@
 import { Actor, Color, Text, vec } from "excalibur";
 import { Resources } from "../resources";
 
-// Texto rápido no topo da tela ("ARENA", "TESOURO", "SALA LIMPA"...), que some sozinho
+// Aviso de texto no topo da tela que some sozinho
 export class AvisoSala extends Actor {
   constructor(texto: string, cor = "#ffd400") {
     super({ pos: vec(160, 20), z: 100 });

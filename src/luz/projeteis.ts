@@ -1,5 +1,6 @@
 // src/luz/projeteis.ts
-import { Actor, Collider, Color, CollisionType, Engine, Line, Ray, Vector, vec } from "excalibur";
+import { Actor, Collider, Color, CollisionType, Engine, Ray, Vector, vec } from "excalibur";
+import { animRaio, impactoFoco } from "./visual-tiros";
 import { podeLevarDano } from "../dano";
 import { paredesDaCena, primeiraBatida, refletir } from "../colisao";
 import { faisca } from "../efeitos";
@@ -7,14 +8,8 @@ import { Grupos } from "../grupos";
 import { Parede } from "../actors/parede";
 
 /*
-  FEIXE REFLETIDO (Lei da Reflexão)
-  O ângulo de incidência é igual ao ângulo de reflexão: ao bater numa parede,
-  só a componente da velocidade perpendicular à parede inverte de sinal.
-  Em vetor: v' = v - 2 (v · n) n, onde n é a normal da parede.
-
-  O feixe se move "na mão" e varre o caminho do quadro contra as paredes,
-  reagindo só à PRIMEIRA parede. Antes, ao encostar em duas paredes no mesmo
-  quadro (onde elas se encontram), refletia duas vezes e atravessava a parede.
+  Feixe refletido (lei da reflexão): v' = v - 2 (v · n) n,
+  n = normal da parede atingida.
 */
 const RAIO_FEIXE = 2;
 
@@ -38,7 +33,7 @@ export class FeixeRefletido extends Actor {
   }
 
   override onInitialize(): void {
-    this.actions.delay(4000).die(); // segurança: não fica quicando para sempre
+    this.actions.delay(4000).die(); // limite de vida
   }
 
   override onPreUpdate(_engine: Engine, elapsed: number): void {
@@ -48,7 +43,7 @@ export class FeixeRefletido extends Actor {
     const paredes = paredesDaCena(this.scene);
     let pos = this.pos.clone();
 
-    // Até 3 batidas no mesmo quadro (ex.: entrando numa quina)
+    // Até 3 batidas no mesmo quadro (quinas)
     for (let i = 0; i < 3 && restante > 0; i++) {
       const batida = primeiraBatida(paredes, pos, this.direcao, restante, RAIO_FEIXE);
       if (!batida) {
@@ -64,14 +59,14 @@ export class FeixeRefletido extends Actor {
       }
       this.ricochetesRestantes--;
       this.direcao = refletir(this.direcao, batida.normal);
-      faisca(this.scene, pos); // faísca no ricochete
+      faisca(this.scene, pos);
     }
     this.pos = pos;
     this.vel = vec(0, 0);
   }
 
   override onCollisionStart(_self: Collider, outro: Collider): void {
-    // Paredes são tratadas na varredura acima
+    // Paredes já tratadas na varredura
     const alvo = outro.owner;
     if (this.acabou || alvo instanceof Parede) return;
     if (podeLevarDano(alvo)) alvo.levarDano(1);
@@ -84,23 +79,22 @@ export class FeixeRefletido extends Actor {
   }
 }
 
-/*
-  RAIO FOCADO (Lente convergente)
-  A luz concentrada vira um laser instantâneo: atravessa todos os inimigos
-  em linha reta até encontrar a primeira parede.
-*/
+// Raio focado: instantâneo, atravessa inimigos até a primeira parede
 export class RaioFocado extends Actor {
-  constructor(origem: Vector, fim: Vector, cor: Color, espessura: number) {
-    super({ pos: vec(0, 0), anchor: vec(0, 0), z: 10 });
-    this.graphics.use(new Line({ start: origem, end: fim, color: cor, thickness: espessura }));
+  // nivel: 0 fraco, 1 médio, 2 carga cheia
+  constructor(origem: Vector, fim: Vector, nivel: number) {
+    // Sprite horizontal, girado na direção do tiro
+    super({ pos: origem, anchor: vec(0, 0.5), z: 10, collisionType: CollisionType.PreventCollision });
+    const caminho = fim.sub(origem);
+    this.rotation = caminho.toAngle();
+    this.graphics.use(animRaio(nivel, caminho.size));
   }
 
   override onInitialize(): void {
-    this.actions.fade(0, 250).die(); // o laser some rapidinho
+    this.actions.delay(150).fade(0, 200).die();
   }
 
-  // Dispara o raio: calcula até onde vai, aplica dano e desenha
-  static disparar(atirador: Actor, direcao: Vector, dano: number, cor: Color): void {
+  static disparar(atirador: Actor, direcao: Vector, dano: number): void {
     const cena = atirador.scene;
     if (!cena) return;
 
@@ -110,15 +104,13 @@ export class RaioFocado extends Actor {
 
     const acertos = cena.physics.rayCast(new Ray(origem, dir), {
       maxDistance: alcanceMaximo,
-      searchAllColliders: true, // queremos TODOS os acertos, não só o primeiro
-      // só interessa parede e o que pode levar dano (ignora o próprio jogador e as balas)
+      searchAllColliders: true,
       filter: (acerto) => {
         const dono = acerto.collider.owner;
         return dono !== atirador && (dono instanceof Parede || podeLevarDano(dono));
       },
     });
 
-    // A primeira parede no caminho bloqueia o raio
     let distanciaParede = alcanceMaximo;
     for (const acerto of acertos) {
       if (acerto.collider.owner instanceof Parede) {
@@ -126,13 +118,19 @@ export class RaioFocado extends Actor {
       }
     }
 
-    // Todo inimigo antes da parede leva dano (o raio atravessa)
+    const nivel = Math.max(0, Math.min(2, dano - 1));
+
+    // Dano em todos antes da parede
     for (const acerto of acertos) {
       const alvo = acerto.collider.owner;
-      if (acerto.distance < distanciaParede && podeLevarDano(alvo)) alvo.levarDano(dano);
+      if (acerto.distance < distanciaParede && podeLevarDano(alvo)) {
+        impactoFoco(cena, acerto.point, nivel);
+        alvo.levarDano(dano);
+      }
     }
 
     const fim = origem.add(dir.scale(distanciaParede));
-    cena.add(new RaioFocado(origem, fim, cor, 1 + dano));
+    cena.add(new RaioFocado(origem, fim, nivel));
+    impactoFoco(cena, fim, nivel);
   }
 }

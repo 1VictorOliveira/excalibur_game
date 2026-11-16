@@ -1,5 +1,5 @@
 // src/actors/bala.ts
-import { Actor, Collider, CollisionGroup, CollisionType, Color, Engine, Vector, vec } from "excalibur";
+import { Actor, Animation, Collider, CollisionGroup, CollisionType, Color, Engine, Scene, Vector, vec } from "excalibur";
 import { podeLevarDano } from "../dano";
 import { paredesDaCena, primeiraBatida } from "../colisao";
 import { faisca } from "../efeitos";
@@ -7,34 +7,59 @@ import { Parede } from "./parede";
 
 const RAIO = 2;
 
+// Visual opcional por sprite; sem ele a bala é um círculo colorido
+export type AparenciaBala = {
+  voo: Animation; // desenhada para a direita
+  ancora: Vector;
+  aoAcabar: (cena: Scene, pos: Vector, angulo: number, naParede: boolean, dissipou: boolean) => void;
+};
+
 export class Bala extends Actor {
   dano = 1;
   private direcao: Vector;
   private rapidez = 220; // px/s
-  private acabou = false; // evita acertar duas coisas no mesmo quadro
+  private acabou = false;
 
-  constructor(pos: Vector, direcao: Vector, grupo: CollisionGroup, cor = Color.Yellow) {
+  constructor(
+    pos: Vector,
+    direcao: Vector,
+    grupo: CollisionGroup,
+    cor = Color.Yellow,
+    private aparencia?: AparenciaBala,
+  ) {
     super({
       name: "bala",
       pos,
       radius: RAIO,
       color: cor,
       collisionType: CollisionType.Passive,
-      collisionGroup: grupo, // quem ela pode acertar é decidido pelo grupo
+      collisionGroup: grupo,
     });
     this.direcao = direcao.normalize();
   }
 
   override onInitialize(): void {
+    if (this.aparencia) {
+      this.anchor = this.aparencia.ancora;
+      this.rotation = this.direcao.toAngle();
+      this.graphics.use(this.aparencia.voo);
+    }
     this.actions.delay(1500).die();
   }
 
-  // A bala se move "na mão": antes de andar, confere se alguma parede está no caminho
-  // do quadro inteiro. Assim ela nunca pula uma parede, mesmo num quadro lento.
+  // Fim do alcance (sem bater em nada)
+  dissipar(): void {
+    if (this.acabou) return;
+    this.acabou = true;
+    if (this.scene) this.aparencia?.aoAcabar(this.scene, this.pos, this.direcao.toAngle(), false, true);
+    this.kill();
+  }
+
+  // Movimento manual com varredura contra as paredes (ver colisao.ts)
   override onPreUpdate(_engine: Engine, elapsed: number): void {
     if (this.acabou || !this.scene) return;
     const passo = (this.rapidez * elapsed) / 1000;
-    if (passo <= 0) return; // pausado (o tempo do jogo está parado)
+    if (passo <= 0) return; // pausado
     const batida = primeiraBatida(paredesDaCena(this.scene), this.pos, this.direcao, passo, RAIO);
     if (batida) {
       this.pos = this.pos.add(this.direcao.scale(batida.avanco));
@@ -46,7 +71,6 @@ export class Bala extends Actor {
   }
 
   override onCollisionStart(_self: Collider, outro: Collider): void {
-    // O grupo já filtrou: se chegou aqui, é um alvo válido ou uma parede.
     if (this.acabou) return;
     const alvo = outro.owner;
     if (podeLevarDano(alvo)) alvo.levarDano(this.dano);
@@ -55,7 +79,10 @@ export class Bala extends Actor {
 
   private terminar(naParede: boolean): void {
     this.acabou = true;
-    if (naParede && this.scene) faisca(this.scene, this.pos); // faísca do Figma
+    if (this.scene) {
+      if (this.aparencia) this.aparencia.aoAcabar(this.scene, this.pos, this.direcao.toAngle(), naParede, false);
+      else if (naParede) faisca(this.scene, this.pos);
+    }
     this.kill();
   }
 }

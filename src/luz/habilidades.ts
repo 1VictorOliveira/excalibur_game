@@ -4,21 +4,18 @@ import { Bala } from "../actors/bala";
 import { Grupos } from "../grupos";
 import { FeixeRefletido, RaioFocado } from "./projeteis";
 import { saidaLivre } from "../colisao";
+import { ANCORA_PRISMA, OrbeCarga, animPrismaVoo, impactoPrisma } from "./visual-tiros";
 
-/*
-  As "armas" do jogo são aplicações da física da luz.
-  Toda habilidade recebe, a cada quadro, para onde o jogador está mirando
-  (vetor zero = não está atirando) e decide o que fazer.
-*/
+// Habilidades de luz. Recebem a mira a cada quadro (vetor zero = sem tiro).
 export interface Habilidade {
   nome: string;
   cor: Color;
   atualizar(jogador: Actor, mira: Vector, elapsed: number): void;
-  cancelar(): void; // chamado ao trocar de habilidade
-  carga(): number; // 0 a 1, para mostrar no HUD (só o Foco usa)
+  cancelar(): void; // ao trocar de habilidade
+  carga(): number; // 0 a 1 (só o Foco usa)
 }
 
-// 1) REFLEXÃO — o feixe ricocheteia nas paredes (até 3 vezes)
+// REFLEXÃO: o feixe ricocheteia até 3 vezes
 export class Reflexao implements Habilidade {
   nome = "REFLEXAO";
   cor = Color.fromHex("#fff4b0");
@@ -29,7 +26,6 @@ export class Reflexao implements Habilidade {
     if (mira.size === 0 || this.recarga > 0) return;
     this.recarga = 450;
     const cena = jogador.scene;
-    // Colado numa parede, o feixe não nasce do outro lado dela
     if (!cena || !saidaLivre(cena, jogador.pos, mira, 10, 2)) return;
     const saida = jogador.pos.add(mira.normalize().scale(10));
     cena.add(new FeixeRefletido(saida, mira, this.cor, 3));
@@ -40,30 +36,31 @@ export class Reflexao implements Habilidade {
   }
 }
 
-// 2) FOCO — segure para concentrar a luz, solte para disparar um laser que atravessa inimigos
+// FOCO: segurar carrega, soltar dispara um raio que atravessa inimigos
 export class Foco implements Habilidade {
   nome = "FOCO";
   cor = Color.fromHex("#39d5ff");
   private tempoCarregando = 0;
   private ultimaMira: Vector | null = null;
   private recarga = 0;
-  private readonly cargaMaxima = 1200; // ms para carga total
+  private readonly cargaMaxima = 1200; // ms
+  private orbe: OrbeCarga | null = null;
 
   atualizar(jogador: Actor, mira: Vector, elapsed: number): void {
     this.recarga -= elapsed;
     if (this.recarga > 0) return;
 
     if (mira.size > 0) {
-      // Segurando: acumula carga
       this.tempoCarregando = Math.min(this.cargaMaxima, this.tempoCarregando + elapsed);
       this.ultimaMira = mira.clone();
+      this.mostrarOrbe(jogador, mira);
       return;
     }
 
-    // Soltou: dispara com dano proporcional à carga (1 a 3)
+    // Dano de 1 a 3, conforme a carga
     if (this.ultimaMira) {
       const dano = 1 + Math.floor(this.carga() * 2.99);
-      RaioFocado.disparar(jogador, this.ultimaMira, dano, this.cor);
+      RaioFocado.disparar(jogador, this.ultimaMira, dano);
       this.cancelar();
       this.recarga = 300;
     }
@@ -71,18 +68,31 @@ export class Foco implements Habilidade {
   cancelar(): void {
     this.tempoCarregando = 0;
     this.ultimaMira = null;
+    this.orbe?.kill();
+    this.orbe = null;
+  }
+
+  // Bola de carga na frente da personagem
+  private mostrarOrbe(jogador: Actor, mira: Vector): void {
+    if (!jogador.scene) return;
+    if (!this.orbe || this.orbe.isKilled() || this.orbe.scene !== jogador.scene) {
+      this.orbe = new OrbeCarga();
+      jogador.scene.add(this.orbe);
+    }
+    this.orbe.pos = jogador.pos.add(mira.normalize().scale(9));
+    this.orbe.mostrar(this.carga());
   }
   carga(): number {
     return this.tempoCarregando / this.cargaMaxima;
   }
 }
 
-// 3) PRISMA — a luz se dispersa em 3 raios coloridos em leque (como o arco-íris do prisma)
+// PRISMA: 3 raios coloridos em leque, de alcance curto
 export class Prisma implements Habilidade {
   nome = "PRISMA";
   cor = Color.fromHex("#ff4fd8");
   private recarga = 0;
-  private readonly abertura = 0.3; // radianos entre os raios (~17°)
+  private readonly abertura = 0.3; // rad entre os raios
   private readonly cores = ["#ff4f4f", "#4fff7a", "#4f8bff"].map((c) => Color.fromHex(c));
 
   atualizar(jogador: Actor, mira: Vector, elapsed: number): void {
@@ -92,11 +102,15 @@ export class Prisma implements Habilidade {
     const base = mira.toAngle();
     [-1, 0, 1].forEach((lado, i) => {
       const dir = Vector.fromAngle(base + lado * this.abertura);
-      if (!jogador.scene || !saidaLivre(jogador.scene, jogador.pos, dir, 10, 2)) return; // raio bloqueado pela parede
+      if (!jogador.scene || !saidaLivre(jogador.scene, jogador.pos, dir, 10, 2)) return;
       const saida = jogador.pos.add(dir.scale(10));
-      const raio = new Bala(saida, dir, Grupos.tiroJogador, this.cores[i]);
+      const raio = new Bala(saida, dir, Grupos.tiroJogador, this.cores[i], {
+        voo: animPrismaVoo(i),
+        ancora: ANCORA_PRISMA,
+        aoAcabar: (cena, pos, angulo, naParede) => impactoPrisma(cena, pos, angulo, i, naParede),
+      });
       raio.actions.clearActions();
-      raio.actions.delay(500).die(); // alcance curto: a luz dispersa perde força
+      raio.actions.delay(500).callMethod(() => raio.dissipar());
       jogador.scene?.add(raio);
     });
     this.recarga = 550;

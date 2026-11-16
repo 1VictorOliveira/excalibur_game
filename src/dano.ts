@@ -1,7 +1,7 @@
 // src/dano.ts
 import { Entity } from "excalibur";
 
-// Tudo que pode levar tiro (jogador, inimigos...) implementa essa interface.
+// Implementado por tudo que pode levar dano
 export interface Danificavel {
   levarDano(quantidade: number): void;
 }
