@@ -1,5 +1,5 @@
 // src/salas/procedural.ts
-import { criarAleatorio, EstiloSala } from "./labirinto";
+import { Celula, criarAleatorio, EstiloSala } from "./labirinto";
 import { sementeDaSala } from "./mapa";
 
 /*
@@ -9,6 +9,8 @@ import { sementeDaSala } from "./mapa";
 */
 
 export type TipoSala = "inicio" | "labirinto" | "pilares" | "arena" | "tesouro";
+export type TipoInimigo = "diabrete" | "anjo-caido" | "arquidemonio";
+export type SpawnInimigo = { tipo: TipoInimigo; celula: Celula };
 
 export type PlanoSala = {
   tipo: TipoSala;
@@ -19,11 +21,26 @@ export type PlanoSala = {
   velocidadeRobo: number;
   recargaRobo: number; // ms entre tiros do robô
   temCristal: boolean;
+  inimigos: SpawnInimigo[];
   nome: string; // aviso que aparece ao entrar ("" = nenhum)
 };
 
 export function chaveDaSala(x: number, y: number): string {
   return `${x},${y}`;
+}
+
+function finalizarPlano(plano: Omit<PlanoSala, "inimigos">): PlanoSala {
+  const inimigos: SpawnInimigo[] = [];
+  if (plano.tipo !== "tesouro") {
+    if (plano.distancia === 0) inimigos.push({ tipo: "diabrete", celula: [4, 1] });
+    if (plano.distancia >= 2) inimigos.push({ tipo: "anjo-caido", celula: [2, 0] });
+    if (plano.distancia >= 4) inimigos.push({ tipo: "arquidemonio", celula: [2, 2] });
+  }
+  return {
+    ...plano,
+    inimigos,
+    quantidadeRobos: Math.max(0, plano.quantidadeRobos - inimigos.length),
+  };
 }
 
 export function planejarSala(x: number, y: number): PlanoSala {
@@ -40,27 +57,33 @@ export function planejarSala(x: number, y: number): PlanoSala {
 
   // Sala inicial: sempre um labirinto calmo
   if (distancia === 0) {
-    return { tipo: "inicio", estilo: "paredes", semente, distancia, ...dificuldade, temCristal: false, nome: "" };
+    return finalizarPlano({
+      tipo: "inicio", estilo: "paredes", semente, distancia, ...dificuldade, temCristal: false, nome: "",
+    });
   }
 
   // Sorteio do tipo (com semente: a mesma sala sempre tem o mesmo tipo)
   const r = aleatorio();
   if (r < 0.12) {
-    return {
+    return finalizarPlano({
       tipo: "tesouro", estilo: "pilares", semente, distancia, ...dificuldade,
       quantidadeRobos: 0, temCristal: true, nome: "TESOURO",
-    };
+    });
   }
   if (r < 0.32) {
-    return {
+    return finalizarPlano({
       tipo: "arena", estilo: "aberto", semente, distancia, ...dificuldade,
       quantidadeRobos: Math.min(dificuldade.quantidadeRobos + 2, 9), temCristal: false, nome: "ARENA",
-    };
+    });
   }
   if (r < 0.57) {
-    return { tipo: "pilares", estilo: "pilares", semente, distancia, ...dificuldade, temCristal: false, nome: "PILARES" };
+    return finalizarPlano({
+      tipo: "pilares", estilo: "pilares", semente, distancia, ...dificuldade, temCristal: false, nome: "PILARES",
+    });
   }
-  return { tipo: "labirinto", estilo: "paredes", semente, distancia, ...dificuldade, temCristal: false, nome: "" };
+  return finalizarPlano({
+    tipo: "labirinto", estilo: "paredes", semente, distancia, ...dificuldade, temCristal: false, nome: "",
+  });
 }
 
 // Embaralha com a semente da sala: os robôs nascem sempre nos mesmos lugares

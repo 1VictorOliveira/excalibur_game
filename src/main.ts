@@ -31,11 +31,12 @@ const game = new Engine({
   },
 });
 
-// Pré-carrega recursos e inicia no menu.
+// Pré-carrega recursos e inicia na sala principal; ?test abre a sala de teste.
 // Carregador próprio: sem a tela azul e sem o botão "Play game" do Excalibur.
 const loader = loadAllSprites(new Carregador({ loadables }));
+const cenaInicial = new URLSearchParams(window.location.search).has("test") ? "teste-inimigos" : "sala";
 game.start(loader).then(() => {
-  game.goToScene("menu");
+  game.goToScene(cenaInicial);
 });
 
 const scoreHuds = new WeakMap<Scene, Label>();
@@ -81,9 +82,5 @@ window.addEventListener("keydown", (e) => {
   if (e.key === "F1") {
     e.preventDefault();
     game.toggleDebug();
-  }
-  if (e.key === "F2" && import.meta.env.DEV) {
-    e.preventDefault();
-    void game.goToScene("teste-inimigos");
   }
 });

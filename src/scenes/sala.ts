@@ -2,6 +2,9 @@
 import { Color, CollisionType, Engine, Scene, Vector, vec, Actor, Text, Keys } from "excalibur";
 import { Jogador } from "../actors/jogador";
 import { Robo } from "../actors/robos";
+import { Diabrete } from "../enemies/Diabrete";
+import { AnjoCaido } from "../enemies/AnjoCaido";
+import { Arquidemonio } from "../enemies/Arquidemonio";
 import { COLUNAS, LINHAS, montarLabirinto } from "../salas/labirinto";
 import { Estado, Direcao } from "../estado";
 import { sementeDaSala } from "../salas/mapa";
@@ -24,6 +27,12 @@ const COR_VERDE = Color.fromHex("#33ff66");
 const COR_AMARELO = Color.fromHex("#ffd400");
 const COR_VERMELHO = Color.fromHex("#ff2d2d");
 const COR_FUNDO = Color.Black;
+
+const TIPOS_INIMIGOS = {
+  diabrete: Diabrete,
+  "anjo-caido": AnjoCaido,
+  arquidemonio: Arquidemonio,
+};
 
 // Direção oposta (por onde o jogador entra na sala seguinte)
 const OPOSTA: Record<Direcao, Direcao> = {
@@ -57,7 +66,7 @@ function direcaoDeEntrada(direcao: Direcao | null): Vector {
 
 export class Sala extends Scene {
   private transicaoPendente: Direcao | null = null;
-  private salaTinhaRobos = false;
+  private salaTinhaInimigos = false;
   private avisoNome: TextoAnimado | null = null; // nome da sala na tela (sprite do Figma)
   private estaPausado = false;
   private atoresPausa: Actor[] = [];
@@ -260,9 +269,12 @@ export class Sala extends Scene {
     const jogador = this.actors.find(a => a.name === "jogador") as Jogador | undefined;
     if (!jogador) return;
 
-    // Sala limpa: todos os robôs morreram -> não voltam se o jogador retornar
-    if (this.salaTinhaRobos && !this.actors.some((a) => a.name === "robo")) {
-      this.salaTinhaRobos = false;
+    // Sala limpa: todos os inimigos morreram -> não voltam se o jogador retornar
+    const temInimigos = this.actors.some(
+      (a) => a.name === "robo" || a instanceof Diabrete || a instanceof AnjoCaido || a instanceof Arquidemonio,
+    );
+    if (this.salaTinhaInimigos && !temInimigos) {
+      this.salaTinhaInimigos = false;
       Estado.salasLimpas.add(chaveDaSala(Estado.coordX, Estado.coordY));
       // "SALA PURIFICADA" do Figma: abre numa linha de luz, brilha e vira poeira dourada.
       // Se o nome da sala ainda estiver na tela, ele sai primeiro (senão os dois se sobrepõem).
@@ -341,16 +353,18 @@ export class Sala extends Scene {
       this.add(new Cristal(labirinto.centroDaCelula(2, 1), chave));
     }
 
-    // Robôs: não voltam em sala já limpa
+    // Inimigos: não voltam em sala já limpa
     const quantidadeRobos = jaLimpa ? 0 : plano.quantidadeRobos;
-    this.salaTinhaRobos = quantidadeRobos > 0;
+    const inimigos = jaLimpa ? [] : plano.inimigos;
+    this.salaTinhaInimigos = quantidadeRobos + inimigos.length > 0;
 
     // Nascem em células distantes da entrada, sempre nos mesmos lugares para esta sala
+    const ocupadas = new Set(inimigos.map(({ celula }) => `${celula[0]},${celula[1]}`));
     const livres: [number, number][] = [];
     for (let c = 0; c < COLUNAS; c++) {
       for (let l = 0; l < LINHAS; l++) {
         const centro = labirinto.centroDaCelula(c, l);
-        if (centro.distance(posEntrada) > 50) {
+        if (centro.distance(posEntrada) > 50 && !ocupadas.has(`${c},${l}`)) {
           livres.push([c, l]);
         }
       }
@@ -365,6 +379,11 @@ export class Sala extends Scene {
       robo.velocidade = plano.velocidadeRobo;
       robo.recargaTiro = plano.recargaRobo;
       this.add(robo);
+    }
+
+    for (const marcador of inimigos) {
+      const Inimigo = TIPOS_INIMIGOS[marcador.tipo];
+      this.add(new Inimigo(labirinto.centroDaCelula(...marcador.celula)));
     }
 
     // Some uma tela preta rápida: a troca de sala deixa de ser um corte seco
