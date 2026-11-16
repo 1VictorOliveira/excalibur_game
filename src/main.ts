@@ -14,7 +14,10 @@ const game = new Engine({
   width: LARGURA,
   height: ALTURA,
   displayMode: DisplayMode.FitScreen,
-  pixelArt: false,
+  // Nitidez: a tela é 320x180 e o navegador amplia até caber no monitor.
+  // Com antialiasing ligado (padrão), essa ampliação é suavizada e tudo fica borrado.
+  pixelArt: true,
+  antialiasing: false,
   backgroundColor: Color.Black,
   scenes: {
     menu: Menu,

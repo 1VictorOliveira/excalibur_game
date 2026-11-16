@@ -126,9 +126,10 @@ export class Menu extends Scene {
 
   // Botão genérico: o fundo (Rectangle) e o texto (ator filho) ficam separados
   private criarBotao(cx: number, y: number, texto: string, acao: () => void): void {
-    const fundo = new Rectangle({ width: 80, height: 20, color: COR_VERDE });
+    // Altura 16 (antes 20): com 20 px os botões JOGAR e CONFIG encostavam e viravam um bloco só
+    const fundo = new Rectangle({ width: 80, height: 16, color: COR_VERDE });
 
-    const botao = new Actor({ pos: vec(cx, y), width: 80, height: 20 });
+    const botao = new Actor({ pos: vec(cx, y), width: 80, height: 16 });
     botao.graphics.use(fundo);
 
     // Posição do filho é relativa ao pai, então (0, 0) fica centralizado no botão

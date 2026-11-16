@@ -1,6 +1,6 @@
 // src/scenes/configuracoes.ts
-import { Color, Engine, Scene, Actor, vec, Text, Font, FontUnit, TextAlign, Rectangle, Keys } from "excalibur";
-import { Resources } from "../resources";
+import { Color, Engine, Scene, Actor, vec, Text, Keys } from "excalibur";
+import { fontePixel } from "../ui/fonte";
 import { AudioConfig } from "../audio";
 
 // Cores
@@ -25,7 +25,7 @@ export class Configuracoes extends Scene {
     const cx = LARGURA / 2;
 
     // Título
-    this.criarTexto("CONFIGURACOES", cx, 15, 12, COR_VERDE);
+    this.criarTexto("CONFIGURACOES", cx, 15, 16, COR_VERDE);
 
     // Linha decorativa
     this.criarLinha(20, 28, LARGURA - 40, 2);
@@ -65,15 +65,7 @@ export class Configuracoes extends Scene {
     const ator = new Actor({ pos: vec(x, y) });
     ator.graphics.use(new Text({
       text: texto,
-      font: new Font({
-        family: "'Press Start 2P', monospace",
-        size: tamanho,
-        unit: FontUnit.Px,
-        color: cor,
-        textAlign: TextAlign.Center,
-        bold: true,
-        smoothing: false,
-      }),
+      font: fontePixel(Math.max(8, tamanho), cor), // a fonte pixel borra abaixo de 8 px
     }));
     this.add(ator);
     return ator;
@@ -137,15 +129,7 @@ export class Configuracoes extends Scene {
     const texto = new Actor({ pos: vec(0, 0) });
     texto.graphics.use(new Text({
       text: simbolo,
-      font: new Font({
-        family: "'Press Start 2P', monospace",
-        size: 10,
-        unit: FontUnit.Px,
-        color: COR_FUNDO,
-        textAlign: TextAlign.Center,
-        bold: true,
-        smoothing: false,
-      }),
+      font: fontePixel(8, COR_FUNDO),
     }));
     botao.addChild(texto);
 
@@ -216,15 +200,7 @@ export class Configuracoes extends Scene {
     if (textoValor) {
       textoValor.graphics.use(new Text({
         text: `${valorAtual}%`,
-        font: new Font({
-          family: "'Press Start 2P', monospace",
-          size: 8,
-          unit: FontUnit.Px,
-          color: COR_VERDE,
-          textAlign: TextAlign.Center,
-          bold: true,
-          smoothing: false,
-        }),
+        font: fontePixel(8, COR_VERDE),
       }));
     }
 
@@ -269,7 +245,7 @@ export class Configuracoes extends Scene {
     const cx = LARGURA / 2;
     const botao = new Actor({
       pos: vec(cx + 100, ALTURA - 20),
-      width:50,
+      width: 60,
       height: 20,
       color: COR_VERDE,
     });
@@ -277,15 +253,7 @@ export class Configuracoes extends Scene {
     const texto = new Actor({ pos: vec(0, 0) });
     texto.graphics.use(new Text({
       text: "VOLTAR",
-      font: new Font({
-        family: "'Press Start 2P', monospace",
-        size: 8,
-        unit: FontUnit.Px,
-        color: COR_FUNDO,
-        textAlign: TextAlign.Left,
-        bold: true,
-        smoothing: false,
-      }),
+      font: fontePixel(8, COR_FUNDO),
     }));
     botao.addChild(texto);
 

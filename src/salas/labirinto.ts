@@ -30,8 +30,14 @@ export type OpcoesLabirinto = {
   larguraPorta?: number;
 };
 
+export type Celula = [coluna: number, linha: number];
+
 export type ResultadoLabirinto = {
   centroDaCelula: (coluna: number, linha: number) => Vector;
+  // Navegação para a IA dos inimigos
+  celulaDe: (pos: Vector) => Celula;
+  // Próxima célula no caminho mais curto (null = não há caminho ou já está na célula)
+  proximaCelula: (de: Celula, para: Celula) => Celula | null;
 };
 
 type Direcao = "N" | "S" | "L" | "O";
@@ -57,6 +63,40 @@ function celulasSeparadas(i: number, j: number, d: Direcao): [string, string] {
     case "O": return [id(i - 1, j - 1), id(i - 1, j)];
     case "L": return [id(i, j - 1), id(i, j)];
   }
+}
+
+function chaveEntre(a: Celula, b: Celula): string {
+  return [`${a[0]},${a[1]}`, `${b[0]},${b[1]}`].sort().join("|");
+}
+
+// Busca em largura (BFS) pelas células, respeitando as paredes entre elas.
+// Devolve a primeira célula do caminho mais curto de "de" até "para".
+function proximaCelulaNoCaminho(de: Celula, para: Celula, bloqueios: Set<string>): Celula | null {
+  if (de[0] === para[0] && de[1] === para[1]) return null;
+  const anterior = new Map<string, Celula | null>([[`${de[0]},${de[1]}`, null]]);
+  const fila: Celula[] = [de];
+  while (fila.length) {
+    const atual = fila.shift()!;
+    if (atual[0] === para[0] && atual[1] === para[1]) {
+      // Volta pelo caminho até achar o passo logo depois da origem
+      let passo = atual;
+      let pai = anterior.get(`${passo[0]},${passo[1]}`)!;
+      while (pai && !(pai[0] === de[0] && pai[1] === de[1])) {
+        passo = pai;
+        pai = anterior.get(`${passo[0]},${passo[1]}`)!;
+      }
+      return passo;
+    }
+    for (const [dc, dl] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+      const vizinho: Celula = [atual[0] + dc, atual[1] + dl];
+      if (vizinho[0] < 0 || vizinho[1] < 0 || vizinho[0] >= COLUNAS || vizinho[1] >= LINHAS) continue;
+      const id = `${vizinho[0]},${vizinho[1]}`;
+      if (anterior.has(id) || bloqueios.has(chaveEntre(atual, vizinho))) continue;
+      anterior.set(id, atual);
+      fila.push(vizinho);
+    }
+  }
+  return null;
 }
 
 // Confere se dá para chegar em todas as células a partir da primeira
@@ -114,8 +154,15 @@ export function montarLabirinto(cena: Scene, engine: Engine, opcoes: OpcoesLabir
     cena.add(new Parede(L - e, meioY + porta, e, meioY));
   } else cena.add(new Parede(L - e, 0, e, A));
 
+  // Paredes entre células (só o estilo "paredes" tem; nos outros tudo é aberto)
+  const bloqueiosFinais = new Set<string>();
   const resultado: ResultadoLabirinto = {
     centroDaCelula: (coluna, linha) => vec(coluna * cw + cw / 2, linha * ch + ch / 2),
+    celulaDe: (pos) => [
+      Math.max(0, Math.min(COLUNAS - 1, Math.floor(pos.x / cw))),
+      Math.max(0, Math.min(LINHAS - 1, Math.floor(pos.y / ch))),
+    ],
+    proximaCelula: (de, para) => proximaCelulaNoCaminho(de, para, bloqueiosFinais),
   };
 
   // ---------- Estilos sem labirinto ----------
@@ -138,9 +185,10 @@ export function montarLabirinto(cena: Scene, engine: Engine, opcoes: OpcoesLabir
 
   // ---------- Sorteio das paredes dos pilares ----------
   let escolhas: { i: number; j: number; d: Direcao }[] = [];
+  let bloqueios = new Set<string>();
   for (let tentativa = 0; tentativa < 50; tentativa++) {
     escolhas = [];
-    const bloqueios = new Set<string>();
+    bloqueios = new Set<string>();
     for (let i = 1; i < COLUNAS; i++) {
       for (let j = 1; j < LINHAS; j++) {
         const d = DIRECOES[Math.floor(aleatorio() * DIRECOES.length)];
@@ -150,6 +198,7 @@ export function montarLabirinto(cena: Scene, engine: Engine, opcoes: OpcoesLabir
     }
     if (todasConectadas(bloqueios)) break;
   }
+  for (const b of bloqueios) bloqueiosFinais.add(b);
 
   // ---------- Cria as paredes internas ----------
   for (const { i, j, d } of escolhas) {
