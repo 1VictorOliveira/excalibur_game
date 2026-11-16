@@ -50,6 +50,7 @@ export class Diabrete extends BaseEnemy {
       direction,
       Grupos.tiroInimigo,
       config.color,
+      undefined,
       config.projectileSpeed,
       config.projectileLifetime * ENEMY_CONFIG.shared.millisecondsPerSecond,
       config.projectileRadius,

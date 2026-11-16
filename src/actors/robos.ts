@@ -14,25 +14,22 @@ const COR_ROBO = Color.fromHex("#d84a4a");
 const COR_AVISO = Color.fromHex("#ffffff");
 
 /*
-  IA do inimigo (versão sem "suicídio"):
-  - Ao entrar na sala, o inimigo aparece aos poucos e fica parado por um instante (aquecimento).
-  - Se ENXERGA o jogador (nenhuma parede no caminho), vai direto até ele.
-  - Se não enxerga, segue o caminho pelo labirinto, célula por célula (busca em largura).
-  - Paredes e outros inimigos só bloqueiam: ninguém morre por encostar neles.
-  - Antes de atirar, pisca em branco (aviso), e só atira com linha livre até o jogador,
-    sem outro inimigo na frente.
+  IA do robô:
+  - aparece aos poucos e espera um instante ao entrar na sala
+  - vê o jogador: vai direto; não vê: segue o caminho pelas células (BFS)
+  - pisca antes de atirar e só atira com linha livre até o jogador
 */
 export class Robo extends Actor implements Danificavel {
-  velocidade = 25; // mais lento que o jogador (90)
+  velocidade = 25;
   recargaTiro = 1000; // ms entre tiros
-  hp = 2; // aguenta 2 tiros antes de morrer
+  hp = 2;
 
-  private tempoRecarga = 900 + Math.random() * 900; // 1º tiro com atraso, cada um num tempo
-  private aquecimento = 700; // ms aparecendo, sem agir, ao entrar na sala
-  private aviso = 0; // ms restantes do aviso antes do tiro
+  private tempoRecarga = 900 + Math.random() * 900; // atraso do 1º tiro
+  private aquecimento = 700; // ms parado ao entrar
+  private aviso = 0; // ms de aviso antes do tiro
   private destruido = false;
 
-  // A visão e o caminho são recalculados a cada 120 ms (não precisa ser todo quadro)
+  // Visão e caminho recalculados a cada 120 ms
   private proximaDecisao = 0;
   private enxergaJogador = false;
   private alvo: Vector | null = null;
@@ -68,7 +65,7 @@ export class Robo extends Actor implements Danificavel {
 
     const jogador = this.scene?.actors.find((a) => a.name === "jogador") as Jogador | undefined;
     if (!jogador || jogador.estaMorto) {
-      this.suavizarVelocidade(vec(0, 0), elapsed); // jogador morreu: para devagar
+      this.suavizarVelocidade(vec(0, 0), elapsed);
       return;
     }
 
@@ -78,7 +75,6 @@ export class Robo extends Actor implements Danificavel {
       this.decidirRumo(jogador);
     }
 
-    // ---------- Movimento ----------
     let desejada = vec(0, 0);
     const distanciaJogador = jogador.pos.distance(this.pos);
     const pertoDemais = this.enxergaJogador && distanciaJogador <= 15;
@@ -86,13 +82,12 @@ export class Robo extends Actor implements Danificavel {
       const rumo = this.alvo.sub(this.pos);
       if (rumo.size > 1) desejada = rumo.normalize().scale(this.velocidade);
     }
-    desejada = desejada.add(this.separacao()); // não se amontoa com outros inimigos
+    desejada = desejada.add(this.separacao());
     this.suavizarVelocidade(desejada, elapsed);
 
-    // ---------- Tiro, com aviso antes ----------
+    // Tiro com aviso
     if (this.aviso > 0) {
       this.aviso -= elapsed;
-      // pisca branco/vermelho enquanto mira
       this.color = Math.floor(this.aviso / 70) % 2 === 0 ? COR_AVISO : COR_ROBO;
       if (this.aviso <= 0) {
         this.color = COR_ROBO;
@@ -104,11 +99,11 @@ export class Robo extends Actor implements Danificavel {
 
     this.tempoRecarga -= elapsed;
     if (this.tempoRecarga <= 0 && this.enxergaJogador && this.podeAtirarEm(jogador)) {
-      this.aviso = 350; // começa a mirar
+      this.aviso = 350;
     }
   }
 
-  // Escolhe para onde ir: direto ao jogador se enxerga, senão a próxima célula do caminho
+  // Destino: o jogador (se visível) ou a próxima célula do caminho
   private decidirRumo(jogador: Jogador): void {
     this.enxergaJogador = this.caminhoLivre(this.pos, jogador.pos, 5);
     if (this.enxergaJogador) {
@@ -118,17 +113,17 @@ export class Robo extends Actor implements Danificavel {
     const minhaCelula = this.mapa.celulaDe(this.pos);
     const proxima = this.mapa.proximaCelula(minhaCelula, this.mapa.celulaDe(jogador.pos));
     if (!proxima) {
-      this.alvo = null; // sem caminho (célula fechada): espera
+      this.alvo = null;
       return;
     }
     const centroProxima = this.mapa.centroDaCelula(proxima[0], proxima[1]);
-    // Se a linha reta até a próxima célula raspa numa quina, primeiro vai ao centro da célula atual
+    // Se a reta raspa numa quina, passa antes pelo centro da célula atual
     this.alvo = this.caminhoLivre(this.pos, centroProxima, 6)
       ? centroProxima
       : this.mapa.centroDaCelula(minhaCelula[0], minhaCelula[1]);
   }
 
-  // Lança 3 raios paralelos (centro e laterais) e confere se nenhuma parede corta o caminho
+  // 3 raios paralelos (centro e laterais) sem parede no caminho
   private caminhoLivre(de: Vector, ate: Vector, meiaLargura: number): boolean {
     const cena = this.scene;
     if (!cena) return false;
@@ -148,7 +143,7 @@ export class Robo extends Actor implements Danificavel {
     return true;
   }
 
-  // Só atira se não houver parede nem outro inimigo entre ele e o jogador (evita fogo amigo "burro")
+  // Linha livre de paredes e de outros robôs
   private podeAtirarEm(jogador: Jogador): boolean {
     const cena = this.scene;
     if (!cena || !this.caminhoLivre(this.pos, jogador.pos, 2)) return false;
@@ -161,7 +156,7 @@ export class Robo extends Actor implements Danificavel {
     return acertos.length === 0;
   }
 
-  // Empurra para longe de inimigos muito próximos
+  // Afasta de robôs muito próximos
   private separacao(): Vector {
     let empurrao = vec(0, 0);
     for (const outro of this.scene?.actors ?? []) {
@@ -173,15 +168,14 @@ export class Robo extends Actor implements Danificavel {
     return empurrao;
   }
 
-  // Acelera e freia aos poucos (antes a velocidade mudava de uma vez, dando trancos)
+  // Acelera e freia aos poucos
   private suavizarVelocidade(desejada: Vector, elapsed: number): void {
     const fator = Math.min(1, elapsed / 100);
     this.vel = this.vel.add(desejada.sub(this.vel).scale(fator));
   }
 
   override onCollisionStart(_self: Collider, outro: Collider): void {
-    // Encostar no jogador: o inimigo se sacrifica e tira 1 de vida (mecânica original mantida).
-    // Paredes e outros inimigos agora só bloqueiam.
+    // Encostar no jogador: o robô explode e tira 1 de vida
     if (outro.owner instanceof Jogador) {
       outro.owner.levarDano(1);
       this.destruir();
@@ -197,8 +191,7 @@ export class Robo extends Actor implements Danificavel {
 
   atirar(direcao: Vector): void {
     if (direcao.size === 0 || !this.scene) return;
-    if (!saidaLivre(this.scene, this.pos, direcao, 10, 2)) return; // nunca nasce do outro lado de uma parede
-    // Bala nasce um pouco à frente do robô
+    if (!saidaLivre(this.scene, this.pos, direcao, 10, 2)) return;
     const saida = this.pos.add(direcao.normalize().scale(10));
     this.scene?.add(new Bala(saida, direcao, Grupos.tiroInimigo, Color.Red));
   }
@@ -209,7 +202,6 @@ export class Robo extends Actor implements Danificavel {
     if (this.hp <= 0) {
       this.destruir();
     } else {
-      // Pisca quando leva dano mas não morre
       this.actions.blink(80, 80, 3);
     }
   }

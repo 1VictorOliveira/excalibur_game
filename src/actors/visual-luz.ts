@@ -2,14 +2,7 @@
 import { Animation, AnimationStrategy, SpriteSheet, Vector } from "excalibur";
 import { Resources } from "../resources";
 
-/*
-  Animações da luz (personagem), desenhadas no Figma. Quadros de 32x32.
-  - parada: brilha no lugar
-  - andando: uma linha por direção (direita, baixo, cima); a esquerda é a direita espelhada.
-    As faíscas ficam "para trás", como um rastro.
-  - dano: a sombra acerta e a luz se recupera (toca uma vez)
-  - morte: a escuridão engole a luz (toca uma vez e fica no último quadro)
-*/
+// Animações da personagem (32x32). Esquerda = direita espelhada.
 const Q = 32;
 
 function folha(imagem: typeof Resources.LuzParada, linhas: number, colunas: number): SpriteSheet {
@@ -40,7 +33,7 @@ export class VisualLuz {
     this.morte = Animation.fromSpriteSheet(folha(Resources.LuzMorte, 1, 8), [0, 1, 2, 3, 4, 5, 6, 7], 130, AnimationStrategy.Freeze);
   }
 
-  // Qual animação de andar usar para um movimento (nas diagonais vale o eixo mais forte; empate = lado)
+  // Na diagonal vale o eixo mais forte
   andando(mov: Vector): Animation {
     if (Math.abs(mov.x) >= Math.abs(mov.y)) return mov.x < 0 ? this.esquerda : this.direita;
     return mov.y < 0 ? this.cima : this.baixo;
