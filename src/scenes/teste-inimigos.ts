@@ -3,6 +3,7 @@ import { Jogador } from "../actors/jogador";
 import { BaseEnemy, BaseEnemyOptions } from "../enemies/BaseEnemy";
 import { ENEMY_CONFIG } from "../enemies/config";
 import { Diabrete } from "../enemies/Diabrete";
+import { AnjoCaido } from "../enemies/AnjoCaido";
 
 class TestEnemy extends BaseEnemy {
   constructor(pos: Vector, options: BaseEnemyOptions) {
@@ -27,7 +28,8 @@ export class TesteInimigos extends Scene {
       this.add(new Diabrete(vec(spawn.x, spawn.y)));
     }
     if (keyboard.wasPressed(Keys.Digit2) || keyboard.wasPressed(Keys.Num2)) {
-      this.spawn(ENEMY_CONFIG.anjoCaido, ENEMY_CONFIG.testScene.anjoCaido);
+      const spawn = ENEMY_CONFIG.testScene.anjoCaido;
+      this.add(new AnjoCaido(vec(spawn.x, spawn.y)));
     }
     if (keyboard.wasPressed(Keys.Digit3) || keyboard.wasPressed(Keys.Num3)) {
       this.spawn(ENEMY_CONFIG.arquidemonio, ENEMY_CONFIG.testScene.arquidemonio);
