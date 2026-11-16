@@ -77,7 +77,7 @@ export const ENEMY_CONFIG = {
       attack: 0.6,
       cooldown: 2.5,
       ringStartRadius: 0,
-      ringEndRadius: 160,
+      ringEndRadius: 100,
       ringThickness: 6,
       warningColor: Color.fromHex("#fb923c"),
       fillColor: Color.Transparent,
