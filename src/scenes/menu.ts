@@ -106,11 +106,12 @@ export class Menu extends Scene {
   // As faíscas que ela solta são o sprite do Figma (ver onPreUpdate), não partículas de código.
   private criarLuz(): void {
     this.luz = new Actor({ pos: vec(LARGURA / 2, Y_LUZ), z: 40 });
+    // A mesma luz do jogo (desenho do Figma), brilhando parada
     const folha = SpriteSheet.fromImageSource({
-      image: Resources.Luz,
-      grid: { rows: 2, columns: 4, spriteWidth: 24, spriteHeight: 24 },
+      image: Resources.LuzParada,
+      grid: { rows: 1, columns: 4, spriteWidth: 32, spriteHeight: 32 },
     });
-    this.luz.graphics.use(Animation.fromSpriteSheet(folha, [0, 1, 2, 3], 150));
+    this.luz.graphics.use(Animation.fromSpriteSheet(folha, [0, 1, 2, 3], 160));
     this.add(this.luz);
   }
 
@@ -218,7 +219,7 @@ export class Menu extends Scene {
     if (this.proximaFaisca <= 0) {
       this.proximaFaisca = 0.35 + Math.random() * 0.45;
       const angulo = Math.random() * Math.PI * 2;
-      const distancia = 9 + Math.random() * 7;
+      const distancia = 14 + Math.random() * 6; // fora do brilho da própria luz
       const ponto = vec(
         Math.round(this.luz.pos.x + Math.cos(angulo) * distancia),
         Math.round(this.luz.pos.y + Math.sin(angulo) * distancia),
