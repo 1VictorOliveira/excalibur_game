@@ -1,9 +1,13 @@
 // src/scenes/game-over.ts
 import { Color, Engine, Scene, Actor, vec, Text, Keys } from "excalibur";
 import { Estado } from "../estado";
+import { Resources } from "../resources";
+import { TextoAnimado } from "../ui/texto-animado";
 import { fontePixel } from "../ui/fonte";
 
 export class GameOver extends Scene {
+  private titulo: TextoAnimado | null = null;
+
   private aoApertar = (evt: { key: Keys }): void => {
     if (evt.key === Keys.Enter) {
       this.reiniciar();
@@ -17,11 +21,6 @@ export class GameOver extends Scene {
     this.backgroundColor = Color.Black;
     const cx = engine.drawWidth / 2;
     const cy = engine.drawHeight / 2;
-
-    // Texto "GAME OVER" - centralizado (a âncora do Actor já centraliza, sem textAlign)
-    const titulo = new Actor({ pos: vec(cx, cy - 40) });
-    titulo.graphics.use(new Text({ text: "GAME OVER", font: fontePixel(24, Color.Red) }));
-    this.add(titulo);
 
     // Botão "TENTAR DE NOVO" - fundo verde
     const fundoBotao = new Actor({
@@ -52,6 +51,15 @@ export class GameOver extends Scene {
 
   override onActivate(): void {
     this.engine.input.keyboard.on("press", this.aoApertar);
+    // "GAME OVER" do Figma: acende piscando como vela fraca e fica brilhando.
+    // Criado a cada vez que a cena abre, para a entrada tocar de novo.
+    this.titulo?.kill();
+    this.titulo = new TextoAnimado(Resources.GameOver, 168, 31, vec(this.engine.drawWidth / 2, this.engine.drawHeight / 2 - 40), {
+      entrada: [0, 1, 0, 1, 2],
+      tempoEntrada: 110,
+      tempoBrilho: 170,
+    });
+    this.add(this.titulo);
   }
 
   override onDeactivate(): void {

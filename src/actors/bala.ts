@@ -2,7 +2,7 @@
 import { Actor, Collider, CollisionGroup, CollisionType, Color, Engine, Vector, vec } from "excalibur";
 import { podeLevarDano } from "../dano";
 import { paredesDaCena, primeiraBatida } from "../colisao";
-import { explosao } from "../efeitos";
+import { faisca } from "../efeitos";
 import { Parede } from "./parede";
 
 const RAIO = 2;
@@ -55,7 +55,7 @@ export class Bala extends Actor {
 
   private terminar(naParede: boolean): void {
     this.acabou = true;
-    if (naParede && this.scene) explosao(this.scene, this.pos, "#ffffff", this.color.toHex(), 5); // faísca
+    if (naParede && this.scene) faisca(this.scene, this.pos); // faísca do Figma
     this.kill();
   }
 }

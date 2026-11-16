@@ -7,7 +7,7 @@ import { Danificavel } from "../dano";
 import { Grupos } from "../grupos";
 import { Estado } from "../estado";
 import { ResultadoLabirinto } from "../salas/labirinto";
-import { explosao } from "../efeitos";
+import { estouro } from "../efeitos";
 import { saidaLivre } from "../colisao";
 
 const COR_ROBO = Color.fromHex("#d84a4a");
@@ -191,7 +191,7 @@ export class Robo extends Actor implements Danificavel {
   destruir(): void {
     if (this.destruido) return;
     this.destruido = true;
-    if (this.scene) explosao(this.scene, this.pos, "#ffffff", "#d84a4a");
+    if (this.scene) estouro(this.scene, this.pos, 3, 8);
     this.kill();
   }
 

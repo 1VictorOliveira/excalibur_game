@@ -4,7 +4,7 @@ import { Danificavel } from "../dano";
 import { Grupos } from "../grupos";
 import { Estado } from "../estado";
 import { Foco, Habilidade, Prisma, Reflexao } from "../luz/habilidades";
-import { explosao } from "../efeitos";
+import { estouro } from "../efeitos";
 
 export class Jogador extends Actor implements Danificavel {
   velocidade = 90; // pixels por segundo
@@ -127,7 +127,7 @@ export class Jogador extends Actor implements Danificavel {
     this.morto = true;
     const cena = this.scene;
     if (!cena) return;
-    explosao(cena, this.pos, "#ffffff", "#5ad45a", 50);
+    estouro(cena, this.pos, 6, 14);
     cena.camera.shake(4, 4, 400);
     this.kill();
     cena.engine.clock.schedule(() => {

@@ -1,4 +1,4 @@
-import { Color, DisplayMode, Engine, WebAudio } from "excalibur";
+import { Color, DisplayMode, Engine } from "excalibur";
 import { Carregador } from "./ui/carregador";
 import { Sala } from "./scenes/sala";
 import { Menu } from "./scenes/menu";
@@ -33,16 +33,6 @@ const loader = new Carregador({ loadables });
 game.start(loader).then(() => {
   game.goToScene("menu");
 });
-
-// O botão "Play game" existia para liberar o áudio (o navegador só deixa tocar som
-// depois de um clique ou tecla). Sem ele, liberamos no primeiro clique/tecla do jogador.
-const liberarAudio = () => {
-  void WebAudio.unlock();
-  window.removeEventListener("pointerdown", liberarAudio);
-  window.removeEventListener("keydown", liberarAudio);
-};
-window.addEventListener("pointerdown", liberarAudio);
-window.addEventListener("keydown", liberarAudio);
 
 // F1 liga/desliga a visualização das caixas de colisão
 window.addEventListener("keydown", (e) => {

@@ -2,7 +2,7 @@
 import { Actor, Collider, Color, CollisionType, Engine, Line, Ray, Vector, vec } from "excalibur";
 import { podeLevarDano } from "../dano";
 import { paredesDaCena, primeiraBatida, refletir } from "../colisao";
-import { explosao } from "../efeitos";
+import { faisca } from "../efeitos";
 import { Grupos } from "../grupos";
 import { Parede } from "../actors/parede";
 
@@ -64,7 +64,7 @@ export class FeixeRefletido extends Actor {
       }
       this.ricochetesRestantes--;
       this.direcao = refletir(this.direcao, batida.normal);
-      explosao(this.scene, pos, "#ffffff", this.color.toHex(), 3); // faísca no ricochete
+      faisca(this.scene, pos); // faísca no ricochete
     }
     this.pos = pos;
     this.vel = vec(0, 0);

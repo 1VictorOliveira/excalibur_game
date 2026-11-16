@@ -7,11 +7,13 @@ import { Estado, Direcao } from "../estado";
 import { sementeDaSala } from "../salas/mapa";
 import { HudLuz } from "../ui/hud-luz";
 import { AvisoSala } from "../ui/aviso-sala";
+import { TextoAnimado } from "../ui/texto-animado";
 import { Cristal } from "../actors/cristal";
 import { chaveDaSala, embaralhar, planejarSala } from "../salas/procedural";
 import { HudVida } from "../ui/hud-vida";
 import { fontePixel } from "../ui/fonte";
 import { cortina } from "../efeitos";
+import { Resources } from "../resources";
 
 const LARGURA = 320;
 const ALTURA = 180;
@@ -56,6 +58,7 @@ function direcaoDeEntrada(direcao: Direcao | null): Vector {
 export class Sala extends Scene {
   private transicaoPendente: Direcao | null = null;
   private salaTinhaRobos = false;
+  private avisoNome: TextoAnimado | null = null; // nome da sala na tela (sprite do Figma)
   private estaPausado = false;
   private atoresPausa: Actor[] = [];
   private handlerEsc: ((evt: { key: Keys }) => void) | null = null;
@@ -261,7 +264,13 @@ export class Sala extends Scene {
     if (this.salaTinhaRobos && !this.actors.some((a) => a.name === "robo")) {
       this.salaTinhaRobos = false;
       Estado.salasLimpas.add(chaveDaSala(Estado.coordX, Estado.coordY));
-      this.add(new AvisoSala("SALA LIMPA", "#33ff66"));
+      // "SALA PURIFICADA" do Figma: abre numa linha de luz, brilha e vira poeira dourada.
+      // Se o nome da sala ainda estiver na tela, ele sai primeiro (senão os dois se sobrepõem).
+      const nomeNaTela = this.avisoNome && !this.avisoNome.isKilled();
+      if (nomeNaTela) this.avisoNome!.sair();
+      const purificada = new TextoAnimado(Resources.SalaPurificada, 159, 22, vec(LARGURA / 2, 22), { duracao: 1400 });
+      if (nomeNaTela) engine.clock.schedule(() => this.add(purificada), 400);
+      else this.add(purificada);
     }
 
     const saida = this.verificarSaida(jogador);
@@ -304,6 +313,7 @@ export class Sala extends Scene {
 
     // Plano procedural da sala: tipo, dificuldade e semente (issue #20)
     const plano = planejarSala(Estado.coordX, Estado.coordY);
+    this.avisoNome = null;
     const chave = chaveDaSala(Estado.coordX, Estado.coordY);
     const jaLimpa = Estado.salasLimpas.has(chave);
 
@@ -318,7 +328,13 @@ export class Sala extends Scene {
     this.add(new HudLuz(jogador)); // habilidade de luz escolhida (issue #19)
     this.add(new HudVida(jogador));
 
-    if (plano.nome) this.add(new AvisoSala(plano.nome));
+    if (plano.tipo === "inicio") {
+      // Sala inicial: nome desenhado no Figma
+      this.avisoNome = new TextoAnimado(Resources.SalaSantuario, 181, 22, vec(LARGURA / 2, 22), { duracao: 1400 });
+      this.add(this.avisoNome);
+    } else if (plano.nome) {
+      this.add(new AvisoSala(plano.nome)); // os outros nomes ainda são texto (sprites ainda não feitos)
+    }
 
     // Sala de tesouro: cristal de luz no centro (se ainda não foi pego)
     if (plano.temCristal && !jaLimpa) {
