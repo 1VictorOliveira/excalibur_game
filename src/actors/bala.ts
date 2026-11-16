@@ -5,20 +5,28 @@ import { podeLevarDano } from "../dano";
 export class Bala extends Actor {
   dano = 1;
 
-  constructor(pos: Vector, direcao: Vector, grupo: CollisionGroup, cor = Color.Yellow) {
+  constructor(
+    pos: Vector,
+    direcao: Vector,
+    grupo: CollisionGroup,
+    cor = Color.Yellow,
+    velocidade = 220,
+    private readonly tempoVida = 1500,
+    raio = 2,
+  ) {
     super({
       name: "bala",
       pos,
-      radius: 2,
+      radius: raio,
       color: cor,
-      vel: direcao.normalize().scale(220),
+      vel: direcao.normalize().scale(velocidade),
       collisionType: CollisionType.Passive,
       collisionGroup: grupo, // quem ela pode acertar é decidido pelo grupo
     });
   }
 
   override onInitialize(): void {
-    this.actions.delay(1500).die();
+    this.actions.delay(this.tempoVida).die();
   }
 
   override onCollisionStart(_self: Collider, outro: Collider): void {

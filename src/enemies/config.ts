@@ -28,6 +28,7 @@ export const ENEMY_CONFIG = {
     cooldown: 2.0,
     projectileSpeed: 120,
     projectileRadius: 3,
+    projectileSpawnOffset: 10,
     projectileLifetime: 1.5,
     damage: 1,
     handRadius: 2,

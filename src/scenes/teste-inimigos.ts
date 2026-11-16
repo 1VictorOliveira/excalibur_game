@@ -2,6 +2,7 @@ import { Color, Engine, Keys, Scene, Vector, vec } from "excalibur";
 import { Jogador } from "../actors/jogador";
 import { BaseEnemy, BaseEnemyOptions } from "../enemies/BaseEnemy";
 import { ENEMY_CONFIG } from "../enemies/config";
+import { Diabrete } from "../enemies/Diabrete";
 
 class TestEnemy extends BaseEnemy {
   constructor(pos: Vector, options: BaseEnemyOptions) {
@@ -22,7 +23,8 @@ export class TesteInimigos extends Scene {
   override onPreUpdate(engine: Engine): void {
     const keyboard = engine.input.keyboard;
     if (keyboard.wasPressed(Keys.Digit1) || keyboard.wasPressed(Keys.Num1)) {
-      this.spawn(ENEMY_CONFIG.diabrete, ENEMY_CONFIG.testScene.diabrete);
+      const spawn = ENEMY_CONFIG.testScene.diabrete;
+      this.add(new Diabrete(vec(spawn.x, spawn.y)));
     }
     if (keyboard.wasPressed(Keys.Digit2) || keyboard.wasPressed(Keys.Num2)) {
       this.spawn(ENEMY_CONFIG.anjoCaido, ENEMY_CONFIG.testScene.anjoCaido);
