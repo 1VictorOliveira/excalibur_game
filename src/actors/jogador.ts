@@ -1,10 +1,10 @@
 // src/actors/jogador.ts
-import { Actor, CollisionType, Color, Engine, Keys, Vector, vec } from "excalibur";
+import { Actor, Animation, CollisionType, Engine, Keys, Vector, vec } from "excalibur";
 import { Danificavel } from "../dano";
 import { Grupos } from "../grupos";
 import { Estado } from "../estado";
 import { Foco, Habilidade, Prisma, Reflexao } from "../luz/habilidades";
-import { estouro } from "../efeitos";
+import { VisualLuz } from "./visual-luz";
 
 export class Jogador extends Actor implements Danificavel {
   velocidade = 90; // pixels por segundo
@@ -17,6 +17,9 @@ export class Jogador extends Actor implements Danificavel {
   private tempoInvencibilidade = 0;
   private invencivel = false;
   private morto = false;
+  // Visual: a luz desenhada no Figma (antes era um retângulo verde)
+  private visual = new VisualLuz();
+  private tocandoDano = false;
 
   constructor(pos: Vector, hp: number = 3, direcaoInicial: Vector = vec(1, 0)) {
     super({
@@ -24,7 +27,6 @@ export class Jogador extends Actor implements Danificavel {
       pos,
       width: 10,
       height: 14,
-      color: Color.fromHex("#5ad45a"),
       collisionType: CollisionType.Active,
       collisionGroup: Grupos.jogador,
     });
@@ -32,7 +34,17 @@ export class Jogador extends Actor implements Danificavel {
     this.direcao = direcaoInicial;
   }
 
+  override onInitialize(): void {
+    this.graphics.use(this.visual.parada);
+  }
+
   override onPreUpdate(engine: Engine, elapsed: number): void {
+    // Morrendo: fica parado enquanto a animação de morte toca
+    if (this.morto) {
+      this.vel = vec(0, 0);
+      return;
+    }
+
     // Não executa lógica quando pausado
     if (Estado.pausado) {
       this.vel = vec(0, 0);
@@ -62,6 +74,7 @@ export class Jogador extends Actor implements Danificavel {
     } else {
       this.vel = vec(0, 0);
     }
+    this.atualizarVisual(mov);
 
     // --- Tiro: setas em 8 direções (duas setas juntas = diagonal) ---
     const mira = vec(0, 0);
@@ -83,6 +96,16 @@ export class Jogador extends Actor implements Danificavel {
     this.habilidadeAtual.atualizar(this, mira, elapsed);
   }
 
+  // Troca a animação conforme o movimento (o dano tem prioridade até terminar)
+  private atualizarVisual(mov: Vector): void {
+    if (this.tocandoDano) {
+      if (!this.visual.dano.done) return;
+      this.tocandoDano = false;
+    }
+    const desejada: Animation = mov.size > 0 ? this.visual.andando(mov) : this.visual.parada;
+    if (this.graphics.current !== desejada) this.graphics.use(desejada);
+  }
+
   get habilidadeAtual(): Habilidade {
     return this.habilidades[this.indiceHabilidade];
   }
@@ -95,11 +118,13 @@ export class Jogador extends Actor implements Danificavel {
   }
 
   // Proteção curta (pisca): ao levar dano e ao entrar numa sala nova
-  ficarInvencivel(ms: number): void {
+  // atrasoPisca: no dano, o pisca-pisca só começa depois da animação de dano (senão ela some no meio)
+  ficarInvencivel(ms: number, atrasoPisca = 0): void {
     this.invencivel = true;
     this.tempoInvencibilidade = ms;
     this.actions.clearActions();
-    this.actions.blink(80, 80, Math.max(1, Math.round(ms / 160)));
+    this.graphics.visible = true;
+    this.actions.delay(atrasoPisca).blink(80, 80, Math.max(1, Math.round((ms - atrasoPisca) / 160)));
   }
 
   get estaMorto(): boolean {
@@ -117,21 +142,29 @@ export class Jogador extends Actor implements Danificavel {
     if (this.hp <= 0) {
       this.morrer();
     } else {
-      this.ficarInvencivel(1000);
+      // Animação de dano do Figma: a sombra acerta a luz e ela se recupera
+      this.tocandoDano = true;
+      this.visual.dano.reset();
+      this.graphics.use(this.visual.dano);
+      this.ficarInvencivel(1000, 360);
     }
   }
 
-  // Antes o jogador sumia e a tela de game over abria no mesmo instante.
-  // Agora ele explode, a tela treme e o game over vem 1 s depois.
+  // Morte: a escuridão engole a luz (animação do Figma, ~1 s), a tela treme
+  // e o game over vem logo depois que a animação termina.
   private morrer(): void {
     this.morto = true;
     const cena = this.scene;
     if (!cena) return;
-    estouro(cena, this.pos, 6, 14);
+    this.vel = vec(0, 0);
+    this.body.collisionType = CollisionType.PreventCollision; // tiros e robôs passam direto
+    this.actions.clearActions(); // para o pisca-pisca da invencibilidade
+    this.graphics.visible = true;
+    this.visual.morte.reset();
+    this.graphics.use(this.visual.morte);
     cena.camera.shake(4, 4, 400);
-    this.kill();
     cena.engine.clock.schedule(() => {
       if (cena.engine.currentScene === cena) cena.engine.goToScene("gameover");
-    }, 1000);
+    }, 1400);
   }
 }

@@ -3,7 +3,14 @@
 import { FontSource, ImageSource } from "excalibur";
 // O Vite resolve o caminho certo das imagens (inclusive no GitHub Pages)
 import logoUrl from "./assets/logo.png";
-import luzUrl from "./assets/luz.png";
+// A luz (personagem) e o cristal, desenhados no Figma
+import luzParadaUrl from "./assets/luz/luz_parada.png";
+import luzAndarUrl from "./assets/luz/luz_andar.png";
+import luzDanoUrl from "./assets/luz/luz_dano.png";
+import luzMorteUrl from "./assets/luz/luz_morte.png";
+import iconesUrl from "./assets/luz/icones.png";
+import cristalUrl from "./assets/luz/cristal.png";
+import coletaUrl from "./assets/luz/coleta.png";
 import nebulosaUrl from "./assets/nebulosa.png";
 import brilhoVioletaUrl from "./assets/nebulosa_brilho_violeta.png";
 import brilhoAzulUrl from "./assets/nebulosa_brilho_azul.png";
@@ -30,7 +37,14 @@ export const FontArcade = new FontSource(
 export const Resources = {
   FontArcade,
   Logo: new ImageSource(logoUrl), // título REFRACT (200x56)
-  Luz: new ImageSource(luzUrl), // estrela de luz: 4 quadros brilhando + 4 de carga (24x24 cada)
+  // Luz (personagem), quadros de 32x32
+  LuzParada: new ImageSource(luzParadaUrl), // 4 quadros: brilhando parada
+  LuzAndar: new ImageSource(luzAndarUrl), // 3 linhas x 4: direita, baixo, cima (esquerda = direita espelhada)
+  LuzDano: new ImageSource(luzDanoUrl), // 4 quadros: a sombra acerta e a luz se recupera
+  LuzMorte: new ImageSource(luzMorteUrl), // 8 quadros: a escuridão engole a luz
+  Icones: new ImageSource(iconesUrl), // 2 linhas x 3: normal / escolhido de REFLEXAO, FOCO, PRISMA
+  Cristal: new ImageSource(cristalUrl), // 4 quadros de 16x16: cristal flutuando
+  CristalColeta: new ImageSource(coletaUrl), // 4 quadros de 16x16: cristal sendo pego
   Nebulosa: new ImageSource(nebulosaUrl), // fundo do espaço (320x180)
   BrilhoVioleta: new ImageSource(brilhoVioletaUrl), // camadas que pulsam por cima da nebulosa
   BrilhoAzul: new ImageSource(brilhoAzulUrl),

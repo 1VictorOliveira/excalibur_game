@@ -67,7 +67,7 @@ export class Robo extends Actor implements Danificavel {
     }
 
     const jogador = this.scene?.actors.find((a) => a.name === "jogador") as Jogador | undefined;
-    if (!jogador) {
+    if (!jogador || jogador.estaMorto) {
       this.suavizarVelocidade(vec(0, 0), elapsed); // jogador morreu: para devagar
       return;
     }
