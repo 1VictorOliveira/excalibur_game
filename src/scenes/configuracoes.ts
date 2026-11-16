@@ -5,15 +5,9 @@ import { BotaoSprite } from "../ui/botao-sprite";
 import { montarFundo } from "../cenario/fundo";
 import { fontePixel } from "../ui/fonte";
 import { cortina } from "../efeitos";
+import { ALTURA, LARGURA } from "../config";
 
-const LARGURA = 320;
-const ALTURA = 180;
-
-/*
-  Tela de OPÇÕES.
-  Por enquanto está vazia de propósito: as opções
-  novas entram aqui depois. A estrutura (título, voltar com ESC ou clique) já está pronta.
-*/
+// Tela de opções (ainda sem opções)
 export class Configuracoes extends Scene {
   private botaoVoltar!: BotaoSprite;
   private saindo = false;
@@ -25,18 +19,17 @@ export class Configuracoes extends Scene {
   override onInitialize(engine: Engine): void {
     montarFundo(this, engine);
 
-    // Título: o botão OPÇÕES do Figma em tamanho 2x (escala inteira continua pixelada)
+    // Título: botão OPÇÕES em 2x
     const titulo = new BotaoSprite(Resources.BotaoOpcoes, vec(LARGURA / 2, 40));
     titulo.scale = vec(2, 2);
     titulo.escolher(true);
     this.add(titulo);
     const emBreve = this.texto("EM BREVE", LARGURA / 2, ALTURA / 2, 8, "#8f7fbf");
-    emBreve.actions.repeatForever((ctx) => ctx.fade(0.4, 900).fade(1, 900)); // "respira" devagar
+    emBreve.actions.repeatForever((ctx) => ctx.fade(0.4, 900).fade(1, 900));
 
-    // VOLTAR é a única opção, então já fica "escolhido" (brilhando)
     this.botaoVoltar = new BotaoSprite(Resources.BotaoVoltar, vec(LARGURA / 2, ALTURA - 30));
     this.add(this.botaoVoltar);
-    // Área de clique um pouco maior que o botão (sem colisão física)
+    // Área do mouse
     const area = new Actor({
       pos: this.botaoVoltar.pos.clone(),
       width: 96,
@@ -65,7 +58,7 @@ export class Configuracoes extends Scene {
   private voltar(): void {
     if (this.saindo) return;
     this.saindo = true;
-    this.botaoVoltar.apertar(); // animação de apertar do Figma, depois volta
+    this.botaoVoltar.apertar();
     this.engine.clock.schedule(() => this.engine.goToScene("menu"), 220);
   }
 

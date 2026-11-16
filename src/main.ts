@@ -5,17 +5,13 @@ import { Menu } from "./scenes/menu";
 import { GameOver } from "./scenes/game-over";
 import { Configuracoes } from "./scenes/configuracoes";
 import { loadables } from "./resources";
-
-// Resolução fixa ideal para pixel art
-const LARGURA = 320;
-const ALTURA = 180;
+import { ALTURA, LARGURA } from "./config";
 
 const game = new Engine({
   width: LARGURA,
   height: ALTURA,
   displayMode: DisplayMode.FitScreen,
-  // Nitidez: a tela é 320x180 e o navegador amplia até caber no monitor.
-  // Com antialiasing ligado (padrão), essa ampliação é suavizada e tudo fica borrado.
+  // Pixel art nítido ao ampliar
   pixelArt: true,
   antialiasing: false,
   backgroundColor: Color.Black,
@@ -27,14 +23,13 @@ const game = new Engine({
   },
 });
 
-// Pré-carrega recursos e inicia no menu.
-// Carregador próprio: sem a tela azul e sem o botão "Play game" do Excalibur.
+// Carrega os recursos e abre o menu
 const loader = new Carregador({ loadables });
 game.start(loader).then(() => {
   game.goToScene("menu");
 });
 
-// F1 liga/desliga a visualização das caixas de colisão
+// F1: mostra as caixas de colisão
 window.addEventListener("keydown", (e) => {
   if (e.key === "F1") {
     e.preventDefault();

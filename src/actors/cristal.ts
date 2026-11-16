@@ -1,15 +1,24 @@
 // src/actors/cristal.ts
-import { Actor, Collider, CollisionGroup, CollisionType, Color, Engine, Polygon, vec, Vector } from "excalibur";
+import { Actor, Animation, AnimationStrategy, Collider, CollisionGroup, CollisionType, SpriteSheet, Vector } from "excalibur";
+import { Resources } from "../resources";
 import { Grupos } from "../grupos";
 import { Estado } from "../estado";
 import { Jogador } from "./jogador";
 
-// Só encosta no jogador (tiros e robôs passam direto)
+// Só colide com o jogador
 const grupoCristal = CollisionGroup.collidesWith([Grupos.jogador]);
 
-// Cristal de luz das salas de tesouro: recupera 1 de vida (issue #20)
+function animacao(imagem: typeof Resources.Cristal, tempo: number, estrategia: AnimationStrategy): Animation {
+  const folha = SpriteSheet.fromImageSource({
+    image: imagem,
+    grid: { rows: 1, columns: 4, spriteWidth: 16, spriteHeight: 16 },
+  });
+  return Animation.fromSpriteSheet(folha, [0, 1, 2, 3], tempo, estrategia);
+}
+
+// Cristal das salas de tesouro: recupera 1 de vida
 export class Cristal extends Actor {
-  private tempo = 0;
+  private pego = false;
 
   constructor(
     pos: Vector,
@@ -26,26 +35,20 @@ export class Cristal extends Actor {
   }
 
   override onInitialize(): void {
-    // Losango amarelo
-    this.graphics.use(
-      new Polygon({
-        points: [vec(4, 0), vec(8, 5), vec(4, 10), vec(0, 5)],
-        color: Color.fromHex("#fff4b0"),
-      }),
-    );
-  }
-
-  override onPreUpdate(_engine: Engine, elapsed: number): void {
-    this.tempo += elapsed / 1000;
-    this.graphics.opacity = 0.6 + 0.4 * Math.sin(this.tempo * 5); // pulsa
+    this.graphics.use(animacao(Resources.Cristal, 160, AnimationStrategy.Loop));
   }
 
   override onCollisionStart(_self: Collider, outro: Collider): void {
     const jogador = outro.owner;
-    if (!(jogador instanceof Jogador)) return;
+    if (!(jogador instanceof Jogador) || this.pego) return;
+    this.pego = true;
     jogador.hp = Math.min(jogador.hpMax, jogador.hp + 1);
     Estado.hp = jogador.hp;
-    Estado.salasLimpas.add(this.chaveSala); // não aparece de novo nesta partida
-    this.kill();
+    Estado.salasLimpas.add(this.chaveSala);
+
+    this.body.collisionType = CollisionType.PreventCollision;
+    const coleta = animacao(Resources.CristalColeta, 90, AnimationStrategy.End);
+    coleta.events.on("end", () => this.kill());
+    this.graphics.use(coleta);
   }
 }

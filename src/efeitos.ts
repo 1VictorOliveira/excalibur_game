@@ -1,12 +1,7 @@
 // src/efeitos.ts
-// Efeitos visuais curtos reaproveitados por vários atores
 import { Actor, Animation, AnimationStrategy, Color, CollisionType, Rectangle, Scene, SpriteSheet, Vector, vec } from "excalibur";
 import { Resources } from "./resources";
 
-/*
-  Faísca de luz desenhada no Figma (6 quadros de 16x16).
-  Substitui as partículas feitas por código, que pareciam artificiais e não eram pixeladas.
-*/
 let folhaFaisca: SpriteSheet | null = null;
 function animacaoFaisca(): Animation {
   folhaFaisca ??= SpriteSheet.fromImageSource({
@@ -16,7 +11,7 @@ function animacaoFaisca(): Animation {
   return Animation.fromSpriteSheet(folhaFaisca, [0, 1, 2, 3, 4, 5], 60, AnimationStrategy.End);
 }
 
-// Uma faísca no ponto (ricochete, bala batendo na parede...). escala inteira = continua pixelado
+// Faísca em um ponto (use escala inteira)
 export function faisca(cena: Scene, pos: Vector, escala = 1, atraso = 0, z = 50): void {
   const ator = new Actor({ pos: pos.clone(), z, collisionType: CollisionType.PreventCollision });
   ator.scale = vec(escala, escala);
@@ -34,7 +29,7 @@ export function faisca(cena: Scene, pos: Vector, escala = 1, atraso = 0, z = 50)
   cena.add(ator);
 }
 
-// Várias faíscas em volta de um ponto, uma atrás da outra: deixa claro QUE algo morreu e ONDE
+// Várias faíscas em sequência ao redor de um ponto
 export function estouro(cena: Scene, pos: Vector, quantidade: number, raio: number, escala = 1): void {
   faisca(cena, pos, escala * 2);
   for (let i = 0; i < quantidade; i++) {
@@ -45,7 +40,7 @@ export function estouro(cena: Scene, pos: Vector, quantidade: number, raio: numb
   }
 }
 
-// Tela preta que some rápido: suaviza a troca de sala (antes era um corte seco)
+// Tela preta que some (transição)
 export function cortina(cena: Scene, largura: number, altura: number, duracao = 220): void {
   const tela = new Actor({
     pos: vec(0, 0),

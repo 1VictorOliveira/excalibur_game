@@ -14,19 +14,14 @@ import {
 import { Resources as Recursos } from "../resources";
 
 /*
-  Fundo animado do espaço, em camadas (de trás para frente):
-  1. Nebulosa base (imagem parada)
-  2. Brilho violeta e azul pulsando fora de fase -> o espaço "respira" e muda de tom
-  3. Poeira cósmica flutuando
-  4. Estrelas em 3 camadas de profundidade, derivando devagar (as de perto andam mais rápido)
-     - todas piscam; algumas de vez em quando dão um "flash" em forma de cruz
-  5. Estrelas cadentes
+  Fundo do menu, de trás para frente:
+  nebulosa, brilhos pulsando, poeira, estrelas em 3 camadas e estrelas cadentes.
 */
 
 const Z_FUNDO = -100;
-const DERIVA = vec(-1, 0.35); // direção em que o céu "anda"
+const DERIVA = vec(-1, 0.35);
 
-// ---------- 1 e 2: nebulosa que pulsa ----------
+// Nebulosa
 class Nebulosa extends Actor {
   private tempo = 0;
   private violeta = Recursos.BrilhoVioleta.toSprite();
@@ -55,7 +50,7 @@ class Nebulosa extends Actor {
   }
 }
 
-// ---------- 4: estrelas ----------
+// Estrelas
 const CORES_ESTRELA = ["#ffffff", "#fff4b0", "#d9c8ff", "#a98bff", "#8fd8ff"];
 
 function corAleatoria(): Color {
@@ -66,7 +61,7 @@ function ponto(cor: Color, tamanho = 1): Graphic {
   return new Rectangle({ width: tamanho, height: tamanho, color: cor });
 }
 
-// Cruz com braços que vão enfraquecendo (raio = tamanho do braço)
+// Cruz com braços que enfraquecem
 function cruz(cor: Color, raio: number): Graphic {
   const membros = [{ graphic: ponto(Color.White), offset: vec(raio, raio) }];
   for (let i = 1; i <= raio; i++) {
@@ -81,9 +76,9 @@ function cruz(cor: Color, raio: number): Graphic {
 
 type Camada = { velocidade: number; tamanho: number; brilho: number };
 const CAMADAS: Camada[] = [
-  { velocidade: 2, tamanho: 1, brilho: 0.45 }, // longe: lentas e fracas
+  { velocidade: 2, tamanho: 1, brilho: 0.45 }, // longe
   { velocidade: 5, tamanho: 1, brilho: 0.7 },
-  { velocidade: 9, tamanho: 2, brilho: 0.9 }, // perto: rápidas e fortes
+  { velocidade: 9, tamanho: 2, brilho: 0.9 }, // perto
 ];
 
 class Estrela extends Actor {
@@ -114,7 +109,7 @@ class Estrela extends Actor {
   override onPreUpdate(engine: Engine, elapsed: number): void {
     this.tempo += elapsed / 1000;
 
-    // Dá a volta na tela: saiu de um lado, entra do outro
+    // Dá a volta na tela
     const L = engine.drawWidth;
     const A = engine.drawHeight;
     if (this.pos.x < -4) this.pos.x = L + 4;
@@ -122,7 +117,7 @@ class Estrela extends Actor {
     if (this.pos.y > A + 4) this.pos.y = -4;
     if (this.pos.y < -4) this.pos.y = A + 4;
 
-    // Flash: a estrela vira uma cruz grande por um instante
+    // Flash em cruz
     if (this.podeFlash) {
       this.esperaFlash -= elapsed;
       if (this.esperaFlash <= 0 && this.duracaoFlash <= 0) {
@@ -131,7 +126,6 @@ class Estrela extends Actor {
       }
       if (this.duracaoFlash > 0) {
         this.duracaoFlash -= elapsed;
-        // sobe e desce o brilho durante o flash
         this.graphics.opacity = Math.sin((1 - this.duracaoFlash / 500) * Math.PI);
         if (this.duracaoFlash <= 0) {
           this.graphics.use(this.normal);
@@ -141,13 +135,12 @@ class Estrela extends Actor {
       }
     }
 
-    // Piscar normal
     const onda = 0.5 + 0.5 * Math.sin(this.tempo * this.ritmo + this.fase);
     this.graphics.opacity = this.camada.brilho * (0.25 + 0.75 * onda);
   }
 }
 
-// ---------- 5: estrela cadente ----------
+// Estrela cadente
 class EstrelaCadente extends Actor {
   constructor(x: number, y: number) {
     super({ pos: vec(x, y), z: Z_FUNDO + 3, vel: vec(-190, 85) });
@@ -172,19 +165,18 @@ class GeradorDeCadentes extends Actor {
     this.espera -= elapsed;
     if (this.espera <= 0) {
       this.scene?.add(new EstrelaCadente(140 + Math.random() * 200, -5 + Math.random() * 70));
-      this.espera = 2500 + Math.random() * 4500; // entre 2,5 e 7 s
+      this.espera = 2500 + Math.random() * 4500;
     }
   }
 }
 
-// ---------- Monta tudo na cena ----------
 export function montarFundo(cena: Scene, engine: Engine): void {
   const L = engine.drawWidth;
   const A = engine.drawHeight;
 
   cena.add(new Nebulosa());
 
-  // Poeira cósmica
+  // Poeira
   const poeira = new ParticleEmitter({
     pos: vec(L / 2, A / 2),
     emitterType: EmitterType.Rectangle,
@@ -207,7 +199,7 @@ export function montarFundo(cena: Scene, engine: Engine): void {
   poeira.z = Z_FUNDO + 1;
   cena.add(poeira);
 
-  // Estrelas: 70 no total, espalhadas nas 3 camadas; 10 delas dão flash
+  // 70 estrelas, 10 com flash
   for (let i = 0; i < 70; i++) {
     const camada = CAMADAS[i % CAMADAS.length];
     cena.add(new Estrela(Math.random() * L, Math.random() * A, camada, i < 10));

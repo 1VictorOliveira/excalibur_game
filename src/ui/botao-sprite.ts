@@ -1,12 +1,7 @@
 // src/ui/botao-sprite.ts
 import { Actor, Animation, AnimationStrategy, CollisionType, ImageSource, Sprite, SpriteSheet, Vector } from "excalibur";
 
-/*
-  Botão desenhado no Figma. A folha tem 3 linhas de 4 quadros (96x16 cada):
-    linha 1 -> normal (parado)
-    linha 2 -> escolhido (brilho pulsando em loop)
-    linha 3 -> apertado (flash branco e "afunda" 1 px, toca uma vez)
-*/
+// Botão por sprite: linhas normal, escolhido (loop) e apertado (uma vez)
 export class BotaoSprite extends Actor {
   private normal: Sprite;
   private escolhido: Animation;

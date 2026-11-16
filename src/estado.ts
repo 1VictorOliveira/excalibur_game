@@ -1,5 +1,5 @@
 // src/estado.ts
-// Estado global do jogo, persistido entre salas
+// Estado global da partida
 
 export type Direcao = "norte" | "sul" | "leste" | "oeste";
 
@@ -9,7 +9,7 @@ export const Estado = {
   portaEntrada: null as Direcao | null, // null = sala inicial
   hp: 3,
   hpMax: 3,
-  pausado: false, // quando true, jogadores e robôs não executam lógica
-  habilidade: 0, // habilidade de luz escolhida (issue #19), mantida entre salas
-  salasLimpas: new Set<string>(), // salas sem robôs ou com cristal já pego (issue #20), chave "x,y"
+  pausado: false,
+  habilidade: 0, // habilidade escolhida
+  salasLimpas: new Set<string>(), // chaves "x,y" das salas já limpas
 };

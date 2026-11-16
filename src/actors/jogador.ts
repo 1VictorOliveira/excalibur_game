@@ -1,22 +1,24 @@
 // src/actors/jogador.ts
-import { Actor, CollisionType, Color, Engine, Keys, Vector, vec } from "excalibur";
+import { Actor, Animation, CollisionType, Engine, Keys, Vector, vec } from "excalibur";
 import { Danificavel } from "../dano";
 import { Grupos } from "../grupos";
 import { Estado } from "../estado";
 import { Foco, Habilidade, Prisma, Reflexao } from "../luz/habilidades";
-import { estouro } from "../efeitos";
+import { VisualLuz } from "./visual-luz";
 
 export class Jogador extends Actor implements Danificavel {
-  velocidade = 90; // pixels por segundo
-  direcao = vec(1, 0); // última direção andada
+  velocidade = 90; // px/s
+  direcao = vec(1, 0);
   hpMax = 3;
   hp = this.hpMax;
-  // Habilidades de luz (issue #19). Teclas 1, 2, 3 escolhem; Q troca para a próxima.
+  // 1, 2, 3 escolhem; Q passa para a próxima
   habilidades: Habilidade[] = [new Reflexao(), new Foco(), new Prisma()];
-  indiceHabilidade = Estado.habilidade; // continua a mesma ao trocar de sala
+  indiceHabilidade = Estado.habilidade;
   private tempoInvencibilidade = 0;
   private invencivel = false;
   private morto = false;
+  private visual = new VisualLuz();
+  private tocandoDano = false;
 
   constructor(pos: Vector, hp: number = 3, direcaoInicial: Vector = vec(1, 0)) {
     super({
@@ -24,7 +26,6 @@ export class Jogador extends Actor implements Danificavel {
       pos,
       width: 10,
       height: 14,
-      color: Color.fromHex("#5ad45a"),
       collisionType: CollisionType.Active,
       collisionGroup: Grupos.jogador,
     });
@@ -32,14 +33,16 @@ export class Jogador extends Actor implements Danificavel {
     this.direcao = direcaoInicial;
   }
 
+  override onInitialize(): void {
+    this.graphics.use(this.visual.parada);
+  }
+
   override onPreUpdate(engine: Engine, elapsed: number): void {
-    // Não executa lógica quando pausado
-    if (Estado.pausado) {
+    if (this.morto || Estado.pausado) {
       this.vel = vec(0, 0);
       return;
     }
 
-    // Atualiza invencibilidade
     if (this.invencivel) {
       this.tempoInvencibilidade -= elapsed;
       if (this.tempoInvencibilidade <= 0) {
@@ -49,7 +52,7 @@ export class Jogador extends Actor implements Danificavel {
 
     const k = engine.input.keyboard;
 
-    // --- Movimento: WASD (as setas agora são do tiro) ---
+    // Movimento: WASD
     const mov = vec(0, 0);
     if (k.isHeld(Keys.A)) mov.x -= 1;
     if (k.isHeld(Keys.D)) mov.x += 1;
@@ -62,25 +65,34 @@ export class Jogador extends Actor implements Danificavel {
     } else {
       this.vel = vec(0, 0);
     }
+    this.atualizarVisual(mov);
 
-    // --- Tiro: setas em 8 direções (duas setas juntas = diagonal) ---
+    // Tiro: setas (8 direções)
     const mira = vec(0, 0);
     if (k.isHeld(Keys.Left)) mira.x -= 1;
     if (k.isHeld(Keys.Right)) mira.x += 1;
     if (k.isHeld(Keys.Up)) mira.y -= 1;
     if (k.isHeld(Keys.Down)) mira.y += 1;
 
-    // Espaço atira para onde o jogador está andando (estilo Berzerk original)
+    // Espaço atira na direção do movimento
     if (mira.size === 0 && k.isHeld(Keys.Space)) mira.setTo(this.direcao.x, this.direcao.y);
 
-    // --- Troca de habilidade ---
     if (k.wasPressed(Keys.Digit1) || k.wasPressed(Keys.Num1)) this.escolherHabilidade(0);
     if (k.wasPressed(Keys.Digit2) || k.wasPressed(Keys.Num2)) this.escolherHabilidade(1);
     if (k.wasPressed(Keys.Digit3) || k.wasPressed(Keys.Num3)) this.escolherHabilidade(2);
     if (k.wasPressed(Keys.Q)) this.escolherHabilidade((this.indiceHabilidade + 1) % this.habilidades.length);
 
-    // A habilidade escolhida decide o que fazer com a mira
     this.habilidadeAtual.atualizar(this, mira, elapsed);
+  }
+
+  // A animação de dano termina antes de voltar ao movimento
+  private atualizarVisual(mov: Vector): void {
+    if (this.tocandoDano) {
+      if (!this.visual.dano.done) return;
+      this.tocandoDano = false;
+    }
+    const desejada: Animation = mov.size > 0 ? this.visual.andando(mov) : this.visual.parada;
+    if (this.graphics.current !== desejada) this.graphics.use(desejada);
   }
 
   get habilidadeAtual(): Habilidade {
@@ -89,17 +101,18 @@ export class Jogador extends Actor implements Danificavel {
 
   escolherHabilidade(indice: number): void {
     if (indice === this.indiceHabilidade) return;
-    this.habilidadeAtual.cancelar(); // ex.: perde a carga do Foco ao trocar
+    this.habilidadeAtual.cancelar();
     this.indiceHabilidade = indice;
     Estado.habilidade = indice;
   }
 
-  // Proteção curta (pisca): ao levar dano e ao entrar numa sala nova
-  ficarInvencivel(ms: number): void {
+  // Invencível por um tempo, piscando (atrasoPisca: espera a animação de dano)
+  ficarInvencivel(ms: number, atrasoPisca = 0): void {
     this.invencivel = true;
     this.tempoInvencibilidade = ms;
     this.actions.clearActions();
-    this.actions.blink(80, 80, Math.max(1, Math.round(ms / 160)));
+    this.graphics.visible = true;
+    this.actions.delay(atrasoPisca).blink(80, 80, Math.max(1, Math.round((ms - atrasoPisca) / 160)));
   }
 
   get estaMorto(): boolean {
@@ -107,31 +120,37 @@ export class Jogador extends Actor implements Danificavel {
   }
 
   levarDano(quantidade: number): void {
-    // "morto": evita levar dano de novo no mesmo quadro e chamar o game over duas vezes
     if (this.invencivel || this.morto) return;
 
     this.hp -= quantidade;
     Estado.hp = this.hp;
-    this.scene?.camera.shake(2, 2, 150); // tranco na tela: o jogador sente o golpe
+    this.scene?.camera.shake(2, 2, 150);
 
     if (this.hp <= 0) {
       this.morrer();
     } else {
-      this.ficarInvencivel(1000);
+      this.tocandoDano = true;
+      this.visual.dano.reset();
+      this.graphics.use(this.visual.dano);
+      this.ficarInvencivel(1000, 360);
     }
   }
 
-  // Antes o jogador sumia e a tela de game over abria no mesmo instante.
-  // Agora ele explode, a tela treme e o game over vem 1 s depois.
+  // Toca a animação de morte e vai para o game over
   private morrer(): void {
     this.morto = true;
+    this.habilidadeAtual.cancelar();
     const cena = this.scene;
     if (!cena) return;
-    estouro(cena, this.pos, 6, 14);
+    this.vel = vec(0, 0);
+    this.body.collisionType = CollisionType.PreventCollision;
+    this.actions.clearActions();
+    this.graphics.visible = true;
+    this.visual.morte.reset();
+    this.graphics.use(this.visual.morte);
     cena.camera.shake(4, 4, 400);
-    this.kill();
     cena.engine.clock.schedule(() => {
       if (cena.engine.currentScene === cena) cena.engine.goToScene("gameover");
-    }, 1000);
+    }, 1400);
   }
 }

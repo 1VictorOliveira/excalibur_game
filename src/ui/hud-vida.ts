@@ -2,9 +2,7 @@
 import { Actor, Color, CollisionType, GraphicsGroup, Rectangle, vec } from "excalibur";
 import { Jogador } from "../actors/jogador";
 
-// Vida do jogador no canto superior esquerdo: uma cruzinha de luz por ponto de vida.
-// Sem isso o jogador não sabia quanta vida tinha e a morte parecia "do nada".
-// (Versão mínima; pontuação e HUD completo continuam na issue #18.)
+// Vida no canto superior esquerdo: uma cruz por ponto de vida
 export class HudVida extends Actor {
   private ultimoHp = -1;
 
@@ -14,7 +12,7 @@ export class HudVida extends Actor {
 
   override onPreUpdate(): void {
     const hp = Math.max(0, this.jogador.estaMorto ? 0 : this.jogador.hp);
-    if (hp === this.ultimoHp) return; // só redesenha quando muda
+    if (hp === this.ultimoHp) return;
     this.ultimoHp = hp;
 
     const membros = [];
