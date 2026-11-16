@@ -8,6 +8,7 @@ import { Grupos } from "../grupos";
 import { Estado } from "../estado";
 import { ResultadoLabirinto } from "../salas/labirinto";
 import { explosao } from "../efeitos";
+import { saidaLivre } from "../colisao";
 
 const COR_ROBO = Color.fromHex("#d84a4a");
 const COR_AVISO = Color.fromHex("#ffffff");
@@ -195,7 +196,8 @@ export class Robo extends Actor implements Danificavel {
   }
 
   atirar(direcao: Vector): void {
-    if (direcao.size === 0) return;
+    if (direcao.size === 0 || !this.scene) return;
+    if (!saidaLivre(this.scene, this.pos, direcao, 10, 2)) return; // nunca nasce do outro lado de uma parede
     // Bala nasce um pouco à frente do robô
     const saida = this.pos.add(direcao.normalize().scale(10));
     this.scene?.add(new Bala(saida, direcao, Grupos.tiroInimigo, Color.Red));

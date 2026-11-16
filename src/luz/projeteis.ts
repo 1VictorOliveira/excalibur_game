@@ -1,7 +1,8 @@
 // src/luz/projeteis.ts
-import { Actor, Collider, Color, CollisionType, Line, Ray, Vector, vec } from "excalibur";
+import { Actor, Collider, Color, CollisionType, Engine, Line, Ray, Vector, vec } from "excalibur";
 import { podeLevarDano } from "../dano";
-import { Estado } from "../estado";
+import { paredesDaCena, primeiraBatida, refletir } from "../colisao";
+import { explosao } from "../efeitos";
 import { Grupos } from "../grupos";
 import { Parede } from "../actors/parede";
 
@@ -10,65 +11,75 @@ import { Parede } from "../actors/parede";
   O ângulo de incidência é igual ao ângulo de reflexão: ao bater numa parede,
   só a componente da velocidade perpendicular à parede inverte de sinal.
   Em vetor: v' = v - 2 (v · n) n, onde n é a normal da parede.
+
+  O feixe se move "na mão" e varre o caminho do quadro contra as paredes,
+  reagindo só à PRIMEIRA parede. Antes, ao encostar em duas paredes no mesmo
+  quadro (onde elas se encontram), refletia duas vezes e atravessava a parede.
 */
+const RAIO_FEIXE = 2;
+
 export class FeixeRefletido extends Actor {
   private ricochetesRestantes: number;
-  private velocidadeGuardada: Vector | null = null; // usada durante a pausa
+  private direcao: Vector;
+  private rapidez = 200; // px/s
+  private acabou = false;
 
   constructor(pos: Vector, direcao: Vector, cor: Color, ricochetes = 3) {
     super({
       name: "feixe",
       pos,
-      radius: 2,
+      radius: RAIO_FEIXE,
       color: cor,
-      vel: direcao.normalize().scale(200),
       collisionType: CollisionType.Passive,
       collisionGroup: Grupos.tiroJogador,
     });
     this.ricochetesRestantes = ricochetes;
+    this.direcao = direcao.normalize();
   }
 
   override onInitialize(): void {
     this.actions.delay(4000).die(); // segurança: não fica quicando para sempre
   }
 
-  override onPreUpdate(): void {
-    // Congela durante a pausa e volta com a mesma velocidade depois
-    if (Estado.pausado && !this.velocidadeGuardada) {
-      this.velocidadeGuardada = this.vel.clone();
-      this.vel = vec(0, 0);
-    } else if (!Estado.pausado && this.velocidadeGuardada) {
-      this.vel = this.velocidadeGuardada;
-      this.velocidadeGuardada = null;
-    }
-  }
+  override onPreUpdate(_engine: Engine, elapsed: number): void {
+    if (this.acabou || !this.scene) return;
+    let restante = (this.rapidez * elapsed) / 1000;
+    if (restante <= 0) return; // pausado
+    const paredes = paredesDaCena(this.scene);
+    let pos = this.pos.clone();
 
-  override onCollisionStart(_self: Collider, outro: Collider): void {
-    const alvo = outro.owner;
-
-    if (alvo instanceof Parede) {
+    // Até 3 batidas no mesmo quadro (ex.: entrando numa quina)
+    for (let i = 0; i < 3 && restante > 0; i++) {
+      const batida = primeiraBatida(paredes, pos, this.direcao, restante, RAIO_FEIXE);
+      if (!batida) {
+        pos = pos.add(this.direcao.scale(restante));
+        break;
+      }
+      pos = pos.add(this.direcao.scale(batida.avanco));
+      restante -= batida.avanco;
       if (this.ricochetesRestantes <= 0) {
-        this.kill();
+        this.pos = pos;
+        this.terminar();
         return;
       }
       this.ricochetesRestantes--;
-
-      // Descobre qual face da parede foi atingida olhando de onde o feixe veio:
-      // se antes ele estava fora da faixa horizontal da parede, bateu numa face lateral.
-      const caixa = outro.bounds;
-      const antes = this.oldPos;
-      const normal =
-        antes.x < caixa.left || antes.x > caixa.right
-          ? vec(Math.sign(antes.x - caixa.center.x), 0) // face esquerda/direita
-          : vec(0, Math.sign(antes.y - caixa.center.y)); // face de cima/baixo
-
-      // v' = v - 2 (v · n) n
-      this.vel = this.vel.sub(normal.scale(2 * this.vel.dot(normal)));
-      this.pos = antes.clone(); // volta para fora da parede antes de seguir
-      return;
+      this.direcao = refletir(this.direcao, batida.normal);
+      explosao(this.scene, pos, "#ffffff", this.color.toHex(), 3); // faísca no ricochete
     }
+    this.pos = pos;
+    this.vel = vec(0, 0);
+  }
 
+  override onCollisionStart(_self: Collider, outro: Collider): void {
+    // Paredes são tratadas na varredura acima
+    const alvo = outro.owner;
+    if (this.acabou || alvo instanceof Parede) return;
     if (podeLevarDano(alvo)) alvo.levarDano(1);
+    this.terminar();
+  }
+
+  private terminar(): void {
+    this.acabou = true;
     this.kill();
   }
 }
