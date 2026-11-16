@@ -4,6 +4,7 @@ import { Jogador } from "../actors/jogador";
 import { Danificavel } from "../dano";
 import { Estado } from "../estado";
 import { Grupos } from "../grupos";
+import { score } from "../score";
 import { ENEMY_CONFIG } from "./config";
 
 export enum EnemyPhase {
@@ -21,6 +22,7 @@ export interface EnemyDurations {
 
 export interface BaseEnemyOptions {
   readonly name: string;
+  readonly score: number;
   readonly color: Color;
   readonly hp?: number;
   readonly speed?: number;
@@ -178,6 +180,7 @@ export abstract class BaseEnemy extends Actor implements Danificavel {
 
   private beginDeath(): void {
     this.destroyed = true;
+    score.add(this.options.score);
     this.vel = Vector.Zero;
     this.body.collisionType = CollisionType.PreventCollision;
     this.actions.clearActions();

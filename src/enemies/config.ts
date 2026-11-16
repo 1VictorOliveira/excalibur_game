@@ -24,6 +24,7 @@ export const ENEMY_CONFIG = {
   },
   diabrete: {
     name: "diabrete",
+    score: 100,
     color: Color.fromHex("#a855f7"),
     hp: 2,
     speed: 30,
@@ -40,6 +41,7 @@ export const ENEMY_CONFIG = {
   },
   anjoCaido: {
     name: "anjo-caido",
+    score: 250,
     color: Color.fromHex("#8a2be2"),
     hp: 4,
     speed: 30,
@@ -61,6 +63,7 @@ export const ENEMY_CONFIG = {
   },
   arquidemonio: {
     name: "arquidemonio",
+    score: 500,
     color: Color.fromHex("#c02626"),
     hp: 8,
     speed: 20,
