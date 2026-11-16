@@ -10,23 +10,34 @@ const RAIO = 2;
 export class Bala extends Actor {
   dano = 1;
   private direcao: Vector;
-  private rapidez = 220; // px/s
+  private rapidez: number;
+  private readonly raio: number;
   private acabou = false; // evita acertar duas coisas no mesmo quadro
 
-  constructor(pos: Vector, direcao: Vector, grupo: CollisionGroup, cor = Color.Yellow) {
+  constructor(
+    pos: Vector,
+    direcao: Vector,
+    grupo: CollisionGroup,
+    cor = Color.Yellow,
+    velocidade = 220,
+    private readonly tempoVida = 1500,
+    raio = RAIO,
+  ) {
     super({
       name: "bala",
       pos,
-      radius: RAIO,
+      radius: raio,
       color: cor,
       collisionType: CollisionType.Passive,
       collisionGroup: grupo, // quem ela pode acertar é decidido pelo grupo
     });
     this.direcao = direcao.normalize();
+    this.rapidez = velocidade;
+    this.raio = raio;
   }
 
   override onInitialize(): void {
-    this.actions.delay(1500).die();
+    this.actions.delay(this.tempoVida).die();
   }
 
   // A bala se move "na mão": antes de andar, confere se alguma parede está no caminho
@@ -35,7 +46,7 @@ export class Bala extends Actor {
     if (this.acabou || !this.scene) return;
     const passo = (this.rapidez * elapsed) / 1000;
     if (passo <= 0) return; // pausado (o tempo do jogo está parado)
-    const batida = primeiraBatida(paredesDaCena(this.scene), this.pos, this.direcao, passo, RAIO);
+    const batida = primeiraBatida(paredesDaCena(this.scene), this.pos, this.direcao, passo, this.raio);
     if (batida) {
       this.pos = this.pos.add(this.direcao.scale(batida.avanco));
       this.terminar(true);
